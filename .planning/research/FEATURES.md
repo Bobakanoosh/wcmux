@@ -8,123 +8,129 @@
 
 ### Table Stakes (Users Expect These)
 
+Features users assume exist. Missing these makes the product feel incomplete.
+
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| ConPTY-backed interactive terminal sessions | Without this, the app is not a credible terminal product on Windows | HIGH | Must support shells and TUIs with resize, input, and ANSI/VT handling intact. |
-| Horizontal and vertical pane splitting | Windows Terminal and cmux both set this expectation | MEDIUM | Must support focus, resize, close, and directional splits. |
-| Multiple tabs / workspaces | Users need concurrent layouts, not a single terminal tree | MEDIUM | Tabs should preserve pane trees and shell state per tab. |
-| Shell profiles and working-directory launch | Windows users expect PowerShell, Command Prompt, WSL, and custom shells | MEDIUM | Dynamic profile discovery is a useful reference behavior. |
-| Clipboard, search, and scrollback | Baseline usability requirement for any serious terminal UI | MEDIUM | Not the user's first ask, but quickly becomes make-or-break in real use. |
-| Windows notifications for attention events | This is part of the product thesis, not optional polish | MEDIUM | Must work with Claude/Codex hooks and survive app backgrounding. |
+| Real terminal session hosting | `cmux`, WezTerm, and Windows Terminal all treat terminal fidelity as the base capability rather than an optional wrapper | HIGH | Must preserve ConPTY-backed behavior for TUIs, prompts, resize, copy/paste, and process exit |
+| Horizontal and vertical pane splits | Split panes are standard in modern terminal multiplexer workflows and are explicitly present in Windows Terminal and WezTerm | MEDIUM | Needs deterministic layout math and keyboard focus movement |
+| Multiple tabs / workspaces | `cmux` and WezTerm both make tabs and workspaces first-class organization primitives | MEDIUM | V1 can start with tabs; richer named workspaces can follow after validation |
+| Keyboard-first navigation and resize | Multiplexer users expect fast focus changes and pane manipulation without mouse dependency | MEDIUM | Shortcut design must be consistent with horizontal/vertical terminology |
+| Per-pane identity and cwd context | Users need to know which tool/session they are looking at and where it is running | MEDIUM | Titles, cwd, and unread/attention state matter more once multiple agents are live |
 
 ### Differentiators (Competitive Advantage)
 
+Features that set the product apart. Valuable, but not required for the first credible release.
+
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Agent-aware notification routing | Lets users see exactly which pane/tab needs attention | MEDIUM | Strong fit with cmux-style workflows and a good early differentiator on Windows. |
-| CLI/API automation for panes, tabs, and keystrokes | Preserves the "primitive, not a workflow" philosophy from cmux | HIGH | Important for parity, but can be phased after the terminal core is solid. |
-| Sidebar metadata per tab | Branch, cwd, latest alert text, shell label | MEDIUM | Helpful, but should not block v1 terminal credibility. |
-| Session/layout restore | Makes the app feel like a daily driver | HIGH | Layout restore is much easier than process restore and should be scoped separately. |
-| In-app browser | Moves toward fuller cmux parity | HIGH | Valuable, but not part of the terminal-first MVP. |
+| Windows desktop notifications for attention events | Matches `cmux`'s AI-session workflow and makes long-running agent sessions practical on Windows | MEDIUM | Strong candidate for v1 because the user explicitly wants it, but it still sits above terminal correctness |
+| Generic attention signaling instead of tool-specific hooks | Keeps the app unopinionated and useful for Claude, Codex, shell scripts, and future tools | MEDIUM | Prefer OSC-based or generic session-state signals over vendor-specific integrations |
+| Native Windows shell with Rust core | Gives the project a real Windows identity rather than feeling like a web shell port | HIGH | Differentiates from browser-first desktop wrappers, but raises implementation risk |
+| Workspace save/restore | Lets users return to complex tab/pane arrangements | MEDIUM | Likely v1.x once the live layout model is stable |
+| Future automation CLI / local API | Brings the project closer to broader `cmux` parity without hard-coding an agent workflow | HIGH | Best deferred until core session semantics are stable |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
+Features that sound attractive but are likely to hurt v1.
+
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Fake "terminal" built from plain stdout/stderr pipes | Seems faster to ship | Breaks full-screen apps, resize semantics, signal handling, and terminal fidelity | Use ConPTY from the start |
-| Full cmux parity in v1 | Attractive because the upstream product already exists | Turns a hard terminal-hosting project into three projects at once: terminal, browser, and automation platform | Ship the terminal core first |
-| Mandatory agent workflow assumptions | Feels productized | Violates the stated `cmux` principle of composable primitives | Offer notifications/hooks/API, not enforced workflows |
-| Cloud dependency for core behavior | Seems convenient for sync or telemetry | Adds fragility and conflicts with a local developer-tooling product | Keep the core local-first |
+| Embedded browser surface in v1 | `cmux` includes browser surfaces and some users may equate that with parity | It adds a second product surface before the terminal core is proven and pushes the app toward a browser shell too early | Defer browser parity until the terminal foundation is trusted |
+| Tool-specific workflow rules | Seems convenient for Claude/Codex demos | Makes the app opinionated and fragile when users run anything else | Build around generic terminal sessions and attention signals |
+| Cloud sync / remote collaboration early | Sounds modern and useful for setups across machines | Adds auth, sync, and conflict complexity unrelated to the core value | Start with local-only persisted layouts |
 
 ## Feature Dependencies
 
 ```text
-ConPTY-backed sessions
-  -> requires -> VT rendering + input routing
-  -> requires -> resize propagation
+Real terminal session hosting
+  -> requires -> ConPTY runtime stability
+                  -> requires -> per-session IO isolation
 
-Pane splitting
-  -> requires -> session/view abstraction
-  -> requires -> layout tree state
+Pane splits
+  -> requires -> deterministic layout tree
+                  -> requires -> focus and resize commands
+
+Tabs / workspaces
+  -> enhances -> pane splits
+                  -> enhances -> per-pane identity and cwd context
 
 Notifications
-  -> requires -> attention event protocol
-  -> enhances -> tabs/workspaces
+  -> requires -> attention event detection
+                  -> requires -> per-pane / per-tab metadata
 
-CLI/API automation
-  -> requires -> stable command router
-  -> enhances -> panes, tabs, notifications
-
-Browser pane
-  -> conflicts with -> terminal-first MVP focus
+Automation API
+  -> depends on -> stable session + layout model
 ```
 
 ### Dependency Notes
 
-- **Pane splitting requires a session/view abstraction:** panes should point at terminal sessions through a stable model, not directly own the process lifecycle.
-- **Notifications require an attention event protocol:** support OSC-based signals and a manual CLI path instead of hard-coding one agent vendor.
-- **CLI/API automation requires a command router:** otherwise every future automation hook becomes UI-coupled glue.
-- **Browser pane conflicts with terminal-first MVP:** it expands scope before the terminal foundation is validated.
+- **Pane splits require a deterministic layout tree:** resizing and focus behavior become brittle if the UI widgets own layout state directly.
+- **Notifications require attention event detection:** desktop toasts are only useful if the app can reliably identify which session or pane needs attention.
+- **Tabs and workspaces enhance pane management:** they are the structure users need once there is more than one active coding task.
+- **Automation depends on stable session semantics:** exposing an API before the session model is stable bakes in the wrong abstractions.
 
 ## MVP Definition
 
 ### Launch With (v1)
 
-- [ ] ConPTY-backed terminal sessions - the product fails without real terminal fidelity
-- [ ] Horizontal and vertical pane splitting - core workspace composition primitive
-- [ ] Multiple tabs with independent pane trees - needed for parallel coding sessions
-- [ ] Windows notifications from terminal/CLI attention signals - core product promise
-- [ ] Shell profile launch for PowerShell, Command Prompt, and WSL - needed for real Windows usage
+- [ ] Real ConPTY-backed terminal sessions - the product is not credible without terminal fidelity
+- [ ] Horizontal and vertical pane splitting - core multiplexer interaction
+- [ ] Multiple tabs with independent layouts - required to manage more than one coding context
+- [ ] Keyboard-first focus, resize, and tab switching - baseline multiplexer ergonomics
+- [ ] Windows attention notifications plus in-app unread state - explicit user requirement and key `cmux`-style workflow advantage
 
 ### Add After Validation (v1.x)
 
-- [ ] Search, better scrollback controls, and polished copy/paste - add once the terminal core is stable
-- [ ] Sidebar metadata per tab - add when users need more at-a-glance context
-- [ ] Layout restore on app relaunch - add once state modeling is trustworthy
-- [ ] CLI/API for workspace automation - add after the internal command model is proven
+- [ ] Named workspace save/restore - add once the live layout model is stable
+- [ ] Rich pane metadata and session templates - add when users start reusing patterns
+- [ ] Better shell integration for cwd/title detection - add after core runtime behavior is solid
 
 ### Future Consideration (v2+)
 
-- [ ] In-app browser - valuable for parity but not required to validate the concept
-- [ ] Full session restore including live process continuity - much harder than layout restore
-- [ ] Cross-machine sync or cloud features - defer until there is strong local usage
+- [ ] Embedded browser surfaces - defer until parity work becomes strategically important
+- [ ] Public automation CLI / local socket API - defer until the internal command model is stable
+- [ ] Advanced cross-machine sync / collaboration - defer until there is proven demand
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Real terminal sessions | HIGH | HIGH | P1 |
+| Real terminal session hosting | HIGH | HIGH | P1 |
 | Pane splitting | HIGH | MEDIUM | P1 |
 | Multiple tabs | HIGH | MEDIUM | P1 |
-| Notifications | HIGH | MEDIUM | P1 |
-| Shell profiles | HIGH | MEDIUM | P1 |
-| CLI/API automation | HIGH | HIGH | P2 |
-| Sidebar metadata | MEDIUM | MEDIUM | P2 |
-| Layout restore | MEDIUM | HIGH | P2 |
-| In-app browser | MEDIUM | HIGH | P3 |
+| Keyboard navigation and resize | HIGH | MEDIUM | P1 |
+| Windows attention notifications | HIGH | MEDIUM | P1 |
+| Workspace save/restore | MEDIUM | MEDIUM | P2 |
+| Generic attention signaling | HIGH | MEDIUM | P2 |
+| Automation API | MEDIUM | HIGH | P3 |
+| Embedded browser surface | LOW for v1 | HIGH | P3 |
 
 **Priority key:**
 - P1: Must have for launch
-- P2: Should have after core validation
+- P2: Should have, add when possible
 - P3: Nice to have, future consideration
 
 ## Competitor Feature Analysis
 
-| Feature | Competitor A | Competitor B | Our Approach |
-|---------|--------------|--------------|--------------|
-| Pane splitting | Windows Terminal supports vertical/horizontal panes | cmux supports pane splits plus tab/workspace structure | Match the baseline in v1 |
-| Tabbed layouts | Windows Terminal supports tabs | cmux uses workspaces + surfaces/tabs | Ship simple tabs first, leave richer workspace taxonomy for later |
-| Attention signals | cmux elevates notifications as a first-class concept | Windows Terminal is a general terminal, not agent-specific | Make notifications part of the core v1 |
-| Automation | cmux exposes CLI/socket primitives | Windows Terminal exposes commands but not cmux-style automation primitives | Defer to v1.x after internal command routing is stable |
+| Feature | cmux | WezTerm | Our Approach |
+|---------|------|---------|--------------|
+| Panes | First-class | First-class | Match the table-stakes pane model in v1 |
+| Tabs / workspaces | First-class | First-class | Ship tabs in v1; evolve toward richer workspaces after validation |
+| Notifications | Explicit product feature for waiting agents and attention | Supported via toast notifications and notification handling controls | Include Windows notifications in v1, but keep them generic rather than agent-specific |
+| Browser surface | Included | Not a core surface | Defer until terminal-first core is proven |
+| Automation / scripting | Present in broader product surface | Extensive scripting and mux API | Treat as later parity rather than launch scope |
 
 ## Sources
 
-- `cmux` upstream README and "The Zen of cmux" section
-- Microsoft Learn: Windows Terminal installation, panes, tab behaviors, shell integration
-- Microsoft Learn: ConPTY documentation
-- Microsoft Learn: App notifications guidance
-- Tauri official docs and xterm.js docs for fallback architecture expectations
+- https://www.cmux.dev/ - Upstream product surface and positioning
+- https://www.cmux.dev/docs/concepts - Upstream concepts for panes, tabs, workspaces, and surfaces
+- https://www.cmux.dev/docs/notifications - Upstream attention / notification model
+- https://wezterm.org/features.html - Reference for table-stakes multiplexer capabilities
+- https://wezterm.org/config/lua/wezterm.mux/index.html - Reference for tabs, panes, windows, and workspaces as first-class concepts
+- https://wezterm.org/config/lua/window/toast_notification.html - Reference for desktop attention notifications in a terminal workflow
+- https://learn.microsoft.com/en-us/windows/terminal/panes - Reference for Windows users' baseline pane expectations
 
 ---
-*Feature research for: Windows-first desktop terminal multiplexer*
+*Feature research for: Windows-first desktop terminal multiplexer for AI coding workflows*
 *Researched: 2026-03-06*
