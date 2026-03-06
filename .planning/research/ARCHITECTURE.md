@@ -9,149 +9,162 @@
 ### System Overview
 
 ```text
-+-----------------------------------------------------------+
-| Native Shell                                              |
-| WinUI 3 window, tab strip, command palette, notification  |
-| center, settings                                          |
-+-------------------------+---------------------------------+
++--------------------------------------------------------------+
+| Native Desktop Shell                                         |
+| WinUI 3 views, tabs, panes, command palette, settings        |
++-------------------------+------------------------------------+
                           |
                           v
-+-----------------------------------------------------------+
-| Workspace / Layout Layer                                  |
-| tabs, panes, focus graph, split tree, persistence model   |
-+-------------------------+---------------------------------+
-                          |
-                          v
-+-----------------------------------------------------------+
-| Session Orchestration Layer                               |
-| terminal session manager, process launcher, cwd tracking, |
-| attention events, future automation API                   |
-+-------------------------+---------------------------------+
-                          |
-                          v
-+-----------------------------------------------------------+
-| Terminal Runtime Layer                                    |
-| ConPTY host, pipe IO, screen buffers, escape handling,    |
-| shell integration hooks                                   |
-+-------------------------+---------------------------------+
-                          |
-                          v
-+-----------------------------------------------------------+
-| Windows Platform Services                                 |
-| CreatePseudoConsole, process APIs, app notifications,     |
-| filesystem, settings store                                |
-+-----------------------------------------------------------+
++--------------------------------------------------------------+
+| Application Core                                              |
+| Commands, layout tree, focus model, profile registry         |
+| notification router, persistence, event bus                  |
++-------------+--------------------------+---------------------+
+              |                          |
+              v                          v
++-----------------------------+   +---------------------------+
+| Terminal Session Host       |   | Notification Service      |
+| ConPTY lifecycle            |   | Windows app notifications |
+| process launch              |   | alert dedupe + unread     |
+| stdin/stdout pump           |   | per-pane/tab state        |
+| resize + teardown           |   +---------------------------+
++-------------+---------------+
+              |
+              v
++--------------------------------------------------------------+
+| Shell Processes                                               |
+| pwsh, cmd, wsl, codex, claude, other CLI tools               |
++--------------------------------------------------------------+
 ```
 
 ### Component Responsibilities
 
 | Component | Responsibility | Typical Implementation |
 |-----------|----------------|------------------------|
-| Native shell | Owns windows, tabs, commands, settings UI, notification center | WinUI 3 shell with explicit view models over a Rust-backed core |
-| Layout engine | Owns split tree, pane sizing, focus moves, tab membership | Pure data model with deterministic reducers and serialization |
-| Session manager | Owns session lifecycle, spawn/kill/restart, metadata, attention state | Rust service that wraps process creation and PTY registration |
-| Terminal adapter | Bridges session output into a renderable terminal surface | Native control or custom surface over ConPTY output and input |
-| Notification service | Maps OSC attention events or process state into Windows notifications and in-app badges | Windows App SDK notifications on native path, Tauri plugin on fallback path |
-| Persistence layer | Saves settings and workspace metadata | JSON-backed local store with versioned schema |
+| UI shell | Owns windows, tabs, panes, keyboard shortcuts, settings, and rendering | WinUI 3 views and controls |
+| App core | Owns commands, layout state, focus model, persistence, and orchestration | Plain application services and immutable-ish state transitions |
+| Terminal session host | Owns ConPTY handles, process creation, I/O loops, resize, and cleanup | Win32 interop over `CreatePseudoConsole`, `CreateProcess`, and dedicated pump threads |
+| Notification service | Turns attention events into local unread state and Windows notifications | Windows App SDK app notifications plus in-memory/evented state |
+| Persistence layer | Stores profiles, layout snapshots, and preferences | Local JSON or SQLite, depending on how fast state grows |
 
 ## Recommended Project Structure
 
 ```text
-app/
-|-- shell/             # WinUI 3 or Tauri shell project
-|-- assets/            # icons, manifests, packaging assets
-|
-crates/
-|-- core-model/        # tabs, panes, commands, persistence schema
-|-- pty-host/          # ConPTY lifecycle and pipe handling
-|-- session-manager/   # session spawn, restart, cwd, attention state
-|-- notifications/     # OSC parsing and desktop notification routing
-|-- automation-api/    # future CLI/socket bridge
-|
-docs/
-|-- architecture/      # diagrams, event contracts, platform notes
+src/
+|-- app/                # bootstrap, DI, command routing
+|-- domain/             # layout tree, tabs, panes, profiles, notifications
+|-- terminal/           # ConPTY host, process lifecycle, VT stream handling
+|-- ui/                 # WinUI views, view models, keybindings
+|-- notifications/      # local app notification adapters
+|-- persistence/        # settings and layout snapshot storage
+|-- integrations/       # shell profile discovery, future CLI/API hooks
+`-- tests/              # domain and integration coverage
 ```
 
 ### Structure Rationale
 
-- **`app/shell/`**: Keeps UI-shell choices isolated so native Windows and Tauri remain swappable until the architecture decision is finalized.
-- **`crates/`**: Splits the hardest platform logic into testable modules that are not coupled to the UI framework.
-- **`docs/architecture/`**: Needed early because PTY behavior and notification semantics are easier to regress than to rediscover.
+- **`domain/`:** keeps pane/tab/session rules independent from UI technology so Tauri fallback remains possible.
+- **`terminal/`:** isolates the most failure-prone subsystem and makes it testable with focused integration tests.
+- **`ui/`:** avoids polluting terminal/session code with view concerns.
+- **`integrations/`:** gives future automation and hook protocols a clean home without infecting the core.
 
 ## Architectural Patterns
 
-### Pattern 1: State-First Layout Model
+### Pattern 1: Session/View Separation
 
-**What:** Represent each workspace as a split tree plus focus metadata instead of mutating UI widgets directly.  
-**When to use:** Always; pane splitting and tab movement need deterministic state transitions.  
-**Trade-offs:** Slightly more upfront modeling, much less UI drift and fewer resize/focus bugs later.
+**What:** A pane references a session object instead of owning a process directly.
+**When to use:** Always. This is the cleanest way to support splits, focus changes, duplication, and later restore/automation.
+**Trade-offs:** Slightly more indirection, but it prevents the UI tree from becoming the source of truth for process state.
 
-### Pattern 2: PTY Isolation Per Session
+**Example:**
+```typescript
+type SessionId = string;
+type PaneId = string;
 
-**What:** Give each terminal session its own ConPTY lifecycle, IO loop, and failure boundary.  
-**When to use:** Always; terminal sessions should not block each other.  
-**Trade-offs:** More background tasks, but cleaner recovery and easier debugging.
+interface PaneNode {
+  id: PaneId;
+  sessionId: SessionId;
+}
+```
 
-### Pattern 3: OS-Neutral Core, OS-Specific Shell
+### Pattern 2: Evented Terminal Pump
 
-**What:** Keep layout/session/notification semantics in the Rust core and keep shell-specific rendering in the UI project.  
-**When to use:** Use from the first commit if native-vs-Tauri is still open.  
-**Trade-offs:** More interface definition work, but it prevents an irreversible shell-framework lock-in too early.
+**What:** Dedicated terminal I/O workers publish structured events back into the app core.
+**When to use:** Required with ConPTY because Microsoft explicitly warns about deadlocks when synchronous channels are not serviced separately.
+**Trade-offs:** More lifecycle code, but much safer than tying reads/writes to the UI thread.
+
+**Example:**
+```typescript
+type TerminalEvent =
+  | { kind: "output"; sessionId: string; data: Uint8Array }
+  | { kind: "exit"; sessionId: string; code: number | null }
+  | { kind: "attention"; sessionId: string; source: "osc" | "cli" };
+```
+
+### Pattern 3: Command Bus over Direct View Actions
+
+**What:** Keyboard shortcuts, menu actions, and future CLI/API calls all hit the same command layer.
+**When to use:** From the start if the project wants to preserve the cmux "primitive, not a solution" philosophy.
+**Trade-offs:** More upfront structure, but it avoids rewriting the app when automation arrives.
 
 ## Data Flow
 
 ### Request Flow
 
 ```text
-User action
-  -> shell command handler
-  -> layout/session service
-  -> ConPTY or state store
-  -> shell view update
+[User action]
+    |
+    v
+[UI command] -> [App core] -> [Terminal host / Notification service]
+    |                |                     |
+    v                v                     v
+[View update] <- [State store] <- [Terminal events / alert events]
 ```
 
 ### State Management
 
 ```text
-Command
-  -> reducer / service
-  -> workspace state
-  -> view model
-  -> shell render
+[State store]
+    ^
+    |
+[Reducers / command handlers] <- [UI intents, terminal events, restore events]
+    |
+    v
+[WinUI views subscribe and render]
 ```
 
 ### Key Data Flows
 
-1. **New split:** User triggers split -> layout engine inserts a pane node -> session manager spawns or duplicates session -> terminal adapter binds the new view.
-2. **Attention notification:** PTY output emits OSC attention or other signal -> notification service marks pane unread -> desktop notification fires if focus suppression rules allow it.
-3. **Tab switch:** Shell selects workspace -> layout engine loads active split tree -> session manager rebinds visible surfaces -> badge state is cleared or updated.
+1. **Session startup:** user opens a tab or pane -> app core resolves shell profile -> terminal host creates ConPTY + child process -> UI subscribes to stream events.
+2. **Pane resize:** view size changes -> app core computes terminal character size -> terminal host calls `ResizePseudoConsole` -> shell redraws.
+3. **Attention event:** session emits OSC/CLI signal -> notification service marks pane/tab unread -> Windows notification is raised -> user jumps back into the pane.
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| Single user / local app | Monolithic desktop app with an internal Rust core is sufficient. |
-| Power user with many concurrent agents | Add bounded buffering, explicit session backpressure, and better log retention for PTY diagnostics. |
-| Automation-heavy future | Split the automation/socket API into its own crate and formalize event contracts before exposing public scripting. |
+| 1-20 concurrent sessions on one machine | Simple in-process app core is fine |
+| 20-100 sessions / many tabs | Optimize render invalidation, scrollback storage, and event batching |
+| Remote control / multi-window / CLI automation | Add a local IPC boundary without splitting the app into network services |
 
 ### Scaling Priorities
 
-1. **First bottleneck:** PTY rendering and resize churn under many live panes - solve with backpressure, coalesced redraws, and explicit buffering.
-2. **Second bottleneck:** Layout/state complexity once workspaces and persistence arrive - solve with deterministic reducers and schema versioning.
+1. **First bottleneck:** terminal rendering and scrollback pressure - fix with efficient diffing, capped scrollback, and batched UI updates.
+2. **Second bottleneck:** session lifecycle bugs - fix with a hardened ConPTY host and better teardown integration tests.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: UI-Driven Session Ownership
+### Anti-Pattern 1: UI Tree Owns Process State
 
-**What people do:** Let each pane widget own the process directly.  
-**Why it's wrong:** Closing, moving, or reparenting panes becomes fragile and restart/recovery logic gets duplicated.  
-**Do this instead:** Keep sessions in a central manager and let panes be projections of session state.
+**What people do:** make each pane view create and own its shell process.
+**Why it's wrong:** pane moves, restores, duplication, and background events become fragile immediately.
+**Do this instead:** keep process/session ownership in the terminal host and let panes reference sessions.
 
-### Anti-Pattern 2: Mixing Browser-Like Views Into the Core Too Early
+### Anti-Pattern 2: Treat Shell Spawn as Terminal Hosting
 
-**What people do:** Design the shell around future browser/workspace parity before terminal fidelity is proven.  
-**Why it's wrong:** The app stops optimizing for terminal correctness and v1 scope balloons.  
-**Do this instead:** Make the core about sessions, panes, and tabs first; add browser/API layers only after the terminal core is stable.
+**What people do:** spawn a process and stream stdout into a text widget.
+**Why it's wrong:** this is not a PTY and it breaks terminal fidelity.
+**Do this instead:** use ConPTY and route VT streams through a dedicated terminal host.
 
 ## Integration Points
 
@@ -159,28 +172,41 @@ Command
 
 | Service | Integration Pattern | Notes |
 |---------|---------------------|-------|
-| ConPTY / process APIs | Direct Win32 calls from Rust | Core platform dependency; test aggressively around resize, exit, and shutdown paths. |
-| Windows app notifications | Native Windows App SDK notification APIs | Best match on native path; supports Action Center / Notification Center behavior. |
-| Tauri plugins | Optional shell-layer integration | Only relevant if the fallback shell is chosen. |
+| Windows app notifications | Windows App SDK API | Elevated apps are a known limitation. |
+| Shell executables (`pwsh`, `cmd`, `wsl.exe`) | Direct process launch through ConPTY | Profile discovery should be explicit and user-editable. |
+| Future automation CLI/API | Local command bus plus IPC shim | Keep optional so the core stays unopinionated. |
 
 ### Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| Shell <-> layout core | Commands + state snapshots | Keep this boundary explicit so shell choice stays reversible. |
-| Layout core <-> session manager | Typed commands / events | Needed for splits, tab moves, and future persistence. |
-| Session manager <-> notifications | Attention events | Must stay generic so the app works with Claude, Codex, or any terminal process. |
+| `ui` <-> `domain` | commands + state subscription | Keep view models dumb |
+| `domain` <-> `terminal` | typed commands/events | critical for testing and later automation |
+| `domain` <-> `notifications` | typed attention events | lets notifications remain optional and replaceable |
+
+## Native vs Tauri Impact
+
+- **Native-first inference:** WinUI 3 is the better fit for the primary product because the user explicitly wants a native Windows app if possible, and Windows-specific windowing plus notifications are first-class in the Microsoft stack.
+- **Tauri fallback inference:** Tauri is viable only if the team accepts a webview-rendered terminal surface. It still needs a ConPTY backend; the shell plugin alone is not enough for a real terminal.
+- **Shared recommendation:** keep `domain` and `terminal` independent from the view layer so a Tauri fallback or hybrid shell remains possible without rewriting the session core.
+
+## Recommended Build Order
+
+1. **Terminal host spike:** prove ConPTY session creation, input/output pumps, resize, and clean teardown.
+2. **Single-tab UI shell:** render one terminal session in a native window with profile launch.
+3. **Layout engine:** add split panes, focus movement, close/resize actions, and tab state.
+4. **Notification path:** wire OSC/CLI attention signals to unread state and Windows notifications.
+5. **Persistence + automation:** add layout restore, settings, and later CLI/API surfaces.
 
 ## Sources
 
-- https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session - ConPTY architecture and threading requirements.
-- https://learn.microsoft.com/en-us/windows/apps/develop/ui/controls/tab-view - Native tab shell control guidance for WinUI 3.
-- https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/ - Windows notification model for desktop apps.
-- https://www.cmux.dev/docs/concepts - Upstream workspace / pane / surface hierarchy used as product-shape reference.
-- https://www.cmux.dev/ - Upstream feature and philosophy reference.
-- https://wezterm.org/features.html - Reference point for table-stakes multiplexer capabilities.
-- https://wezterm.org/config/lua/wezterm.mux/index.html - Reference point for workspaces, windows, tabs, and panes as first-class multiplexer concepts.
+- Microsoft Learn: Creating a Pseudoconsole session
+- Microsoft Learn: Windows App SDK overview and release channels
+- Microsoft Learn: App notifications overview and desktop notification guides
+- Microsoft Learn: Windows Terminal panes, tabs, and shell integration docs
+- Tauri official docs: architecture, frontend hosting model, shell plugin, notification plugin
+- `cmux` upstream README and "The Zen of cmux" section
 
 ---
-*Architecture research for: Windows-first desktop terminal multiplexer for AI coding workflows*
+*Architecture research for: Windows-first desktop terminal multiplexer*
 *Researched: 2026-03-06*

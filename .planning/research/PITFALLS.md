@@ -6,175 +6,173 @@
 
 ## Critical Pitfalls
 
-### Pitfall 1: Fake terminal integration
+### Pitfall 1: Shipping a fake terminal instead of a PTY host
 
-**What goes wrong:**  
-The app launches shells as child processes but does not preserve real terminal behavior, so cursor movement, alternate screen apps, full-screen TUIs, copy/paste semantics, or shell-specific prompts behave incorrectly.
+**What goes wrong:**
+The app can launch commands, but TUIs, resize behavior, cursor handling, and shell fidelity are broken or inconsistent.
 
-**Why it happens:**  
-Teams optimize for getting text on screen quickly and underestimate how much terminal behavior users expect to "just work."
+**Why it happens:**
+Teams confuse process spawning with terminal hosting and try to wire stdout/stderr into a generic text control.
 
-**How to avoid:**  
-Adopt ConPTY-backed session hosting from the beginning and define terminal fidelity tests before building advanced UI.
+**How to avoid:**
+Treat ConPTY as non-negotiable for the terminal core. Prove shell, `vim`, and agent workflows against the same host early.
 
-**Warning signs:**  
-`vim`, `less`, `fzf`, `claude`, or `codex` behave differently than they do in Windows Terminal or WezTerm.
+**Warning signs:**
+Apps work for `echo` and logs, but fail on full-screen tools, alternate screen buffers, or keyboard shortcuts.
 
-**Phase to address:**  
-Phase 1 - terminal runtime and pane foundation
-
----
-
-### Pitfall 2: PTY deadlocks from poor IO threading
-
-**What goes wrong:**  
-Terminal sessions freeze, drop output, or hang on shutdown under load.
-
-**Why it happens:**  
-ConPTY uses synchronous communication channels, and Microsoft's pseudoconsole guidance explicitly warns that servicing both channels on the same thread can deadlock.
-
-**How to avoid:**  
-Use separate read/write servicing paths per session, structured tracing, and shutdown integration tests.
-
-**Warning signs:**  
-Large command output stalls a pane, resize events hang, or process exit leaves ghost sessions.
-
-**Phase to address:**  
-Phase 1 - terminal runtime and process lifecycle
+**Phase to address:**
+Phase 1
 
 ---
 
-### Pitfall 3: Over-scoping parity before proving the core
+### Pitfall 2: Deadlocks and teardown bugs in ConPTY I/O
 
-**What goes wrong:**  
-The roadmap chases browser integration, workspace automation, or a full socket API before the terminal core is trustworthy.
+**What goes wrong:**
+Sessions hang on startup, resize, or shutdown; shells survive after the pane closes; the app leaks handles or blocks the UI.
 
-**Why it happens:**  
-Upstream `cmux` has a broad product surface and it is tempting to copy all of it immediately.
+**Why it happens:**
+Microsoft's ConPTY guidance is explicit that synchronous channels need dedicated servicing and careful lifetime handling.
 
-**How to avoid:**  
-Lock v1 around real sessions, splits, tabs, and notifications; treat browser/workspace/API parity as later milestones unless they become required by validation.
+**How to avoid:**
+Run input and output pumps independently, test teardown explicitly, and make resize/close behavior part of the first integration suite.
 
-**Warning signs:**  
-Roadmap discussions spend more time on browser or automation surfaces than on shell fidelity, resize behavior, or focus rules.
+**Warning signs:**
+Intermittent hangs, orphaned shell processes, or shutdown paths that depend on timing.
 
-**Phase to address:**  
-Phase 0 / roadmap definition and every later scoping checkpoint
-
----
-
-### Pitfall 4: Agent-specific notification semantics
-
-**What goes wrong:**  
-Notifications work for one tool but not for the broader class of terminal-based agents and scripts.
-
-**Why it happens:**  
-The app is designed around a single integration instead of generic attention signaling.
-
-**How to avoid:**  
-Support standard terminal notification patterns first, including OSC-based attention signals and explicit process-state hooks where possible.
-
-**Warning signs:**  
-The notification design assumes "Claude waiting" instead of "a pane or session needs attention."
-
-**Phase to address:**  
-Phase 2 - notifications and attention UX
+**Phase to address:**
+Phase 1
 
 ---
 
-### Pitfall 5: Shell lock-in too early
+### Pitfall 3: Coupling layout state to specific UI widgets
 
-**What goes wrong:**  
-The product becomes tightly coupled to WinUI-only or Tauri-only assumptions before the native-vs-fallback decision is fully validated.
+**What goes wrong:**
+Splits, tabs, restore, and later automation become brittle because state only exists inside view objects.
 
-**Why it happens:**  
-UI code and session logic are built together with no clear boundary.
+**Why it happens:**
+It is tempting to let pane controls directly own process and layout behavior in a desktop UI framework.
 
-**How to avoid:**  
-Keep the layout/session/notification model in a shell-agnostic core and make the outer shell a replaceable adapter.
+**How to avoid:**
+Keep layout trees and session ownership in domain state, not in the visual tree.
 
-**Warning signs:**  
-PTY process logic directly depends on view classes, or replacing the shell would require rewriting the state model.
+**Warning signs:**
+Moving or duplicating panes requires special-case UI code, and restore logic starts reading visual state instead of persisted state.
 
-**Phase to address:**  
-Phase 1 - project scaffolding and architecture
+**Phase to address:**
+Phase 2
+
+---
+
+### Pitfall 4: Designing notifications before install identity is real
+
+**What goes wrong:**
+Notifications seem fine in a narrow dev path, then fail or behave differently after distribution.
+
+**Why it happens:**
+Windows desktop notifications depend on packaging, AUMID/activator setup, and have documented limitations for elevated apps.
+
+**How to avoid:**
+Decide early how the app will be installed and tested, and validate notifications in an installed build, not only a dev session.
+
+**Warning signs:**
+Notifications do not persist, clicks do not reactivate the app, or behavior changes between packaged and unpackaged runs.
+
+**Phase to address:**
+Phase 3
+
+---
+
+### Pitfall 5: Trying to reach full cmux parity before the Windows core feels good
+
+**What goes wrong:**
+The project stalls across browser, automation, restore, and metadata work before the base terminal experience is trustworthy.
+
+**Why it happens:**
+Upstream parity is seductive, especially when the reference product already demonstrates many desirable features.
+
+**How to avoid:**
+Enforce a terminal-first roadmap: real sessions, panes, tabs, notifications, then expand.
+
+**Warning signs:**
+Roadmap items multiply before a single reliable daily-driver build exists.
+
+**Phase to address:**
+Phase 0 / roadmap definition
 
 ## Technical Debt Patterns
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Hard-code a single shell profile | Faster first demo | Breaks PowerShell / cmd / WSL expectations and makes testing shallow | Only for a throwaway prototype, not for the planned v1 |
-| Persist layout with ad hoc JSON blobs and no schema version | Quick save/restore | Painful migrations and brittle recovery later | Acceptable only if schema versioning is added before release |
-| Fire desktop notifications without in-app unread state | Easier implementation | Users lose context once the toast disappears | Never for the intended workflow |
+| Store layout only in UI widgets | Faster first prototype | Makes restore, automation, and testing painful | Never beyond a throwaway spike |
+| Skip profile abstraction and hard-code PowerShell | Faster demo | Blocks WSL/cmd/custom shell support and user trust | Only in the first ConPTY spike |
+| Ignore packaging until release time | Faster local iteration | Notifications and activation paths break late | Never for the notification phase |
+| Treat alert parsing as vendor-specific | Faster Claude/Codex demo | Locks the product to one tool and violates the primitive model | Only if wrapped behind a generic attention-event adapter |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| ConPTY | Mixing all PTY traffic on one blocking thread | Isolate PTY IO per session and test shutdown / resize explicitly |
-| Windows notifications | Assuming every dev-time notification behavior matches installed-app behavior | Test packaged and installed paths, especially if Tauri fallback is used |
-| Shell current working directory | Ignoring shell integration / OSC cwd updates | Capture cwd updates explicitly so duplicate-tab and split behavior can inherit directory correctly later |
+| ConPTY | Drive everything from one blocking thread | Separate pump responsibilities and test teardown paths |
+| Windows notifications | Test only in an unpackaged debug loop | Validate installed app behavior and activation wiring |
+| Tauri fallback | Assume shell plugin equals PTY terminal | Keep ConPTY as a dedicated backend layer |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Redraw on every byte of PTY output | High CPU, laggy typing, pane jitter | Buffer and coalesce screen updates | As soon as several active agents stream output at once |
-| Re-layout full tree on every focus or resize | Noticeable pane lag | Use a deterministic split tree and incremental layout math | With nested splits and many tabs |
-| Unbounded scrollback / logs in memory | Memory growth and sluggish tab switches | Cap buffers and persist selectively | Long-running coding sessions or agent logs |
+| Re-render whole terminal surface on every chunk | Laggy typing and high CPU | Batch output and use renderer-level diffing | Usually visible with active agent output or large scrollback |
+| Unlimited scrollback in memory | RAM growth and sluggish tab switching | Cap scrollback and persist selectively | Noticeable with long coding sessions |
+| Resize spam directly to shell | Flicker and unstable TUIs | Debounce physical resize and commit character-grid changes deliberately | Visible during aggressive pane resizing |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Exposing a future automation API with no command restrictions | Arbitrary local execution surface | Ship no public automation surface in v1, or gate it behind explicit local permissions |
-| Treating notification payloads as trusted content | UI spoofing or bad links | Sanitize titles/bodies and treat external payloads as untrusted |
-| Running everything under one implicit trust model | Confusing behavior across PowerShell, cmd, WSL, and future remote sessions | Model session metadata explicitly and log what was launched and why |
+| Over-broad shell execution permissions in Tauri | Arbitrary command execution surface becomes too open | Restrict plugin capabilities and keep command routing explicit |
+| Unsanitized CLI/API automation surface | Local privilege surprises or destructive commands | Treat automation as a typed command layer with validation |
+| Running elevated and expecting notifications to still work | Attention flow silently breaks | Document and test the non-elevated path as the supported mode |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Tabs without enough metadata | Users lose track of which agent/session is where | Show title, cwd, shell/tool identity, and unread state |
-| Notifications that fire while the relevant pane is already focused | Feels noisy and broken | Suppress desktop alerts when the active tab/pane already has focus |
-| Pane splitting with inconsistent orientation terms | Users cannot build muscle memory | Match clear horizontal/vertical semantics and keep shortcuts consistent |
+| Pane actions feel inconsistent by direction | Users lose trust in splits quickly | Match Windows Terminal directional split/focus vocabulary |
+| Notifications are noisy instead of actionable | Users disable them | Deduplicate and route to the exact pane/tab needing attention |
+| Tab model is too abstract too early | Users cannot tell where work lives | Start with simple tabs and clear titles before inventing richer workspace metaphors |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Terminal host:** Verify full-screen TUIs, resize, copy/paste, and process exit all behave correctly.
-- [ ] **Pane management:** Verify split, close, move focus, and tab switch all preserve session state.
-- [ ] **Notifications:** Verify in-app unread markers and Windows desktop toasts stay in sync.
-- [ ] **Fallback shell path:** Verify the core still works if the shell implementation changes from native to Tauri.
+- [ ] **Terminal host:** Often missing resize and teardown correctness - verify with `vim`, `less`, and shell exit paths
+- [ ] **Pane splitting:** Often missing focus traversal and close semantics - verify keyboard navigation in uneven pane trees
+- [ ] **Notifications:** Often missing installed-build validation - verify click activation and persistence outside the dev loop
+- [ ] **Tabs:** Often missing independent session ownership - verify closing one tab does not leak or kill unrelated sessions
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Fake terminal integration | HIGH | Rebuild the session layer around ConPTY, then retest every terminal behavior path |
-| PTY deadlocks | HIGH | Add tracing around IO paths, reproduce with stress fixtures, split blocking flows, and rework shutdown |
-| Over-scoped roadmap | MEDIUM | Cut v1 back to core table stakes and move parity work into later phases |
-| Agent-specific notifications | MEDIUM | Replace tool-specific hooks with generic attention events and OSC support |
+| Fake terminal backend | HIGH | Replace the backend with ConPTY and re-test all TUI cases |
+| Layout/UI coupling | MEDIUM | Extract domain state, migrate panes to reference sessions, then rework restore |
+| Broken notification activation | MEDIUM | Fix packaging/AUMID/activator path and validate installed builds |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Fake terminal integration | Phase 1 | Run TUIs and agent CLIs side by side with parity checks against Windows Terminal |
-| PTY deadlocks | Phase 1 | Stress-test concurrent output, resize, and shutdown |
-| Over-scoping parity | Phase 0 / Phase 1 planning | Confirm roadmap keeps v1 focused on terminal-first requirements |
-| Agent-specific notifications | Phase 2 | Validate notifications using more than one terminal-based tool and a generic OSC trigger |
-| Shell lock-in too early | Phase 1 | Prove the shell can call into the core without owning session logic |
+| Fake terminal backend | Phase 1 | `pwsh`, `cmd`, `wsl`, `vim`, and resize all work through ConPTY |
+| ConPTY deadlocks | Phase 1 | repeated open/close/resize cycles do not hang or leak |
+| Layout coupled to UI | Phase 2 | pane trees can be serialized/restored without view state hacks |
+| Notification identity issues | Phase 3 | installed builds raise and activate notifications correctly |
+| Premature parity scope | Roadmap creation | roadmap keeps browser/API work after terminal core proof |
 
 ## Sources
 
-- https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session - Primary source for ConPTY behavior and deadlock warnings.
-- https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/ - Primary source for Windows desktop notification behavior.
-- https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/notifications/app-notifications/app-notifications-quickstart - Primary source for app notification implementation constraints.
-- https://www.cmux.dev/docs/notifications - Upstream reference for attention-state lifecycle and suppression behavior.
-- https://wezterm.org/config/lua/window/toast_notification.html - Reference for multiplexer-style desktop notification behavior.
-- https://wezterm.org/config/lua/config/notification_handling.html - Reference for notification suppression modes.
-- https://wezterm.org/shell-integration.html - Reference for cwd and prompt-state shell integration.
+- Microsoft Learn: Creating a Pseudoconsole session
+- Microsoft Learn: App notifications overview and desktop notification guides
+- Microsoft Learn: Windows Terminal panes and shell integration docs
+- Tauri official shell and notification plugin docs
+- `cmux` upstream README and scope
 
 ---
-*Pitfalls research for: Windows-first desktop terminal multiplexer for AI coding workflows*
+*Pitfalls research for: Windows-first desktop terminal multiplexer*
 *Researched: 2026-03-06*
