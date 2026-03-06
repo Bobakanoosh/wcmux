@@ -1,137 +1,139 @@
 # Project Research Summary
 
 **Project:** wcmux
-**Domain:** Windows-first desktop terminal multiplexer for AI coding workflows
+**Domain:** Windows-first desktop terminal multiplexer
 **Researched:** 2026-03-06
 **Confidence:** MEDIUM
 
 ## Executive Summary
 
-This project is best understood as a Windows-native terminal multiplexer with agent-aware notifications, not as a generic desktop wrapper around shell commands. The upstream `cmux` philosophy matters here: the product should expose composable primitives such as terminals, panes, tabs, notifications, and later automation, without forcing a specific agent workflow.
+`wcmux` fits a fairly clear product category: a desktop terminal multiplexer with pane, tab, and attention-management primitives. The research supports a terminal-first roadmap rather than trying to chase full `cmux` parity immediately. On Windows, the hard technical requirement is not the pane UI but correct pseudoconsole hosting through ConPTY, because everything else depends on real terminal behavior matching tools like Claude, Codex, `vim`, and `fzf`.
 
-The main architectural finding is that Windows has a real terminal primitive for this job: ConPTY. If `wcmux` wants credible terminal fidelity, it needs to own ConPTY session lifecycle, VT stream handling, resize propagation, and cleanup. There is no supported "embed the stock console window" path that preserves the product goal. From a product-stack perspective, the cleanest native-first implementation is a WinUI 3 shell on the Windows App SDK with ConPTY behind it. Tauri remains a viable fallback, but only if the project accepts a webview-rendered terminal surface and still builds a ConPTY backend.
-
-The biggest risks are terminal-hosting correctness, premature scope expansion toward full `cmux` parity, and notification behavior drifting between development and installed builds. The roadmap should therefore prove the terminal core first, then add panes/tabs, then wire notifications, and only then move into automation and parity work.
+The strongest recommendation is to separate the product into a shell-agnostic Rust core plus a Windows UI shell. Native Windows remains the preferred direction, with WinUI 3 / Windows App SDK as the best fit for a genuinely native shell, but Tauri remains a credible fallback if native UI delivery risk becomes too high for a first release. The biggest risks are fake terminal integration, ConPTY deadlocks, and over-scoping parity before the terminal core is trustworthy.
 
 ## Key Findings
 
 ### Recommended Stack
 
-For the native-first path, the best fit is `.NET 10 + Windows App SDK 1.8.5 + WinUI 3 + ConPTY`. That stack aligns with the user's preference for a native Windows app, uses Microsoft's current desktop stack, and avoids forcing the first version through a browser-shaped UI. Packaging should be treated as a product concern early because Windows notification behavior is tied to app identity and install flow.
-
-For the fallback path, `Tauri 2 + Rust + ConPTY + @xterm/xterm` is viable and keeps Electron off the table. The important caveat is that Tauri does not remove the need for a true PTY backend. It changes the frontend and packaging story, not the terminal-hosting requirement.
+Use a Rust core around ConPTY, async session management, structured tracing, and versioned state models. Pair that core with a native Windows shell if feasible, using WinUI 3 and Windows App SDK for tabs, notifications, and packaging; if that path proves too expensive for a first-time native Windows app, keep the Rust core and swap the shell to Tauri 2.x rather than relaxing into Electron.
 
 **Core technologies:**
-- **Windows App SDK 1.8.5:** native windowing, lifecycle, and notification APIs
-- **.NET 10:** current LTS runtime and the least painful native-first developer experience
-- **ConPTY:** Windows-supported pseudoterminal host for real shell sessions
+- **WinUI 3 / Windows App SDK**: native shell, tabs, notification integration - best match for the "native first" goal
+- **Rust + `windows` crate + `tokio`**: PTY/session engine, eventing, and platform interop - strongest fit for ConPTY-heavy systems work
+- **Windows ConPTY**: real terminal hosting - non-negotiable if terminal fidelity is the core promise
+- **Tauri 2.x**: fallback shell only - acceptable if native delivery risk is too high early
 
 ### Expected Features
 
-The table-stakes set is narrow and clear: real ConPTY-backed terminal sessions, horizontal and vertical splits, multiple tabs, shell profile launch, and Windows notifications for attention events. These are enough to validate the concept and match the user's stated goals.
+Table stakes are straightforward: real PTY-backed sessions, pane splitting, multiple tabs, clear session metadata, keyboard-first navigation, and attention notifications. The research strongly supports your current terminal-first v1: these are enough to validate the product without dragging in browser surfaces, cloud sync, or deep automation too early.
 
 **Must have (table stakes):**
-- Real terminal sessions - users expect actual shell fidelity
-- Pane splitting - core composition primitive
-- Multiple tabs - required for concurrent layouts
-- Windows notifications - part of the product thesis, not optional polish
+- Real terminal sessions backed by ConPTY
+- Horizontal and vertical pane splitting
+- Multiple tabs containing pane arrangements
+- Session labels / metadata and keyboard control
+- In-app unread state and Windows attention notifications
 
 **Should have (competitive):**
-- Agent-aware unread state by pane/tab - differentiator for AI coding workflows
-- Later CLI/API automation - preserves the cmux primitive model
+- Native Windows shell polish
+- Generic tool-agnostic attention handling
+- Architecture that preserves native-shell and Tauri-shell optionality
 
 **Defer (v2+):**
-- In-app browser - useful for parity, not needed to validate the terminal core
-- Full live session restore - much harder than layout restore
+- Browser surfaces
+- Public automation / scripting API
+- Remote or shared sessions
 
 ### Architecture Approach
 
-The recommended architecture is a native desktop shell over a domain/app core that owns layout, commands, and persistence, plus a dedicated terminal-host subsystem that owns ConPTY and process lifecycle. Notifications should be a separate service that consumes attention events and raises Windows notifications without being entangled with pane rendering.
+The recommended structure is a state-first layout and session model: a shell layer drives commands into a Rust core, the core owns tabs, pane trees, session state, and notifications, and a ConPTY host layer isolates each terminal session behind its own lifecycle and IO handling. This keeps pane movement, tab switching, and notification state deterministic while avoiding early lock-in to either WinUI or Tauri.
 
 **Major components:**
-1. **UI shell** - windows, tabs, panes, shortcuts, settings
-2. **App core** - commands, layout tree, profile registry, persistence, unread state
-3. **Terminal host** - ConPTY session creation, I/O pumps, resize, teardown
+1. **Shell layer** - windows, tab strip, shortcuts, notification presentation
+2. **Layout core** - split tree, focus rules, tab/workspace membership, persistence schema
+3. **Session manager** - spawn/kill/restart, cwd tracking, metadata, unread state
+4. **PTY host** - ConPTY lifecycle, input/output, resize, shutdown
+5. **Notification service** - generic attention events mapped to Windows toasts and in-app state
 
 ### Critical Pitfalls
 
-1. **Fake terminal backend** - avoid by using ConPTY from the start
-2. **ConPTY deadlocks and teardown bugs** - avoid with dedicated pump threads and lifecycle tests
-3. **UI-owned layout/process state** - avoid with session/view separation and domain-driven layout state
-4. **Notification identity drift** - avoid by validating installed-build notification behavior early
-5. **Premature full parity scope** - avoid with a strict terminal-first MVP
+1. **Fake terminal integration** - solve this first with ConPTY-backed fidelity checks against real terminal behavior
+2. **PTY deadlocks and shutdown bugs** - isolate IO paths per session and add tracing from the beginning
+3. **Over-scoping parity too early** - keep v1 centered on sessions, panes, tabs, and notifications
+4. **Agent-specific notification design** - model attention generically so the app works with any terminal process
+5. **Shell lock-in too early** - keep session/layout logic outside the UI framework
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-### Phase 1: Terminal Foundation
-**Rationale:** nothing else matters if terminal fidelity is weak
-**Delivers:** ConPTY session host, shell profile launch, one working terminal surface
-**Addresses:** real sessions, shell profiles
-**Avoids:** fake-terminal and ConPTY lifecycle pitfalls
+### Phase 1: Terminal Core
+**Rationale:** Everything depends on credible terminal hosting.
+**Delivers:** ConPTY session management, shell launching, terminal fidelity checks, and the initial pane/layout state model.
+**Addresses:** Real sessions, split-pane foundations, shell-agnostic core setup.
+**Avoids:** Fake terminal integration and PTY deadlocks.
 
-### Phase 2: Layout Primitives
-**Rationale:** panes and tabs are the next indispensable primitives once one session works
-**Delivers:** horizontal/vertical splits, multiple tabs, focus and resize behavior
-**Uses:** app core + layout tree
-**Implements:** session/view separation and pane state modeling
+### Phase 2: Multiplexing UX
+**Rationale:** Once sessions are real, the product can become useful day to day.
+**Delivers:** Horizontal/vertical splits, focus movement, tab management, pane metadata, and keyboard shortcuts.
+**Uses:** The stable session and layout core from Phase 1.
+**Implements:** The user-facing multiplexer shell.
 
-### Phase 3: Attention and Notifications
-**Rationale:** notifications are part of the product identity and should land once session routing is stable
-**Delivers:** unread state, pane/tab attention markers, Windows notifications, jump-to-attention flow
-**Uses:** Windows App SDK notifications or Tauri notification plugin in fallback builds
-**Implements:** notification service and signal routing
-
-### Phase 4: Persistence and Automation
-**Rationale:** only worth adding after the daily-driver terminal workflow is believable
-**Delivers:** layout restore, settings polish, early CLI/API primitives
+### Phase 3: Attention and Product Hardening
+**Rationale:** Notifications and polish matter after the terminal/multiplexer loop is stable.
+**Delivers:** Generic attention detection, Windows notifications, unread state, and architecture hardening around native-vs-Tauri boundaries.
+**Uses:** Session metadata, notification service, and shell integration.
+**Implements:** The multi-agent workflow value that differentiates the product.
 
 ### Phase Ordering Rationale
 
-- ConPTY and session correctness are hard dependencies for every later feature.
-- Pane/tab work should sit on top of a stable terminal-host abstraction, not precede it.
-- Notifications depend on session identity and pane/tab routing to feel actionable.
-- Automation should reuse the same command layer that keyboard/UI actions already use.
+- ConPTY fidelity has to land before any meaningful parity claims.
+- Split panes and tabs should build on a deterministic state model rather than direct widget mutations.
+- Notifications should follow stable session identity and unread state instead of being bolted on per tool.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 1:** terminal rendering details, PTY interop edge cases, and shell compatibility tests
-- **Phase 3:** packaging/identity choices for notifications in installed builds
+- **Phase 1:** terminal surface strategy on Windows, especially if native UI requires a specific rendering/control approach
+- **Phase 3:** installed-app notification behavior and packaging constraints across native and Tauri paths
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2:** pane trees, focus routing, and tab management are established product patterns
+Phases with standard patterns:
+- **Phase 2:** split trees, focus movement, tab membership, and keyboard shortcuts are well-understood multiplexer patterns
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM | Official docs are strong, but the native-vs-Tauri choice is still a product tradeoff |
-| Features | MEDIUM | User priorities are clear; wider Windows-terminal expectations are inferred from Windows Terminal and cmux |
-| Architecture | MEDIUM | ConPTY and app-shell boundaries are well supported, but renderer specifics still need implementation spikes |
-| Pitfalls | HIGH | The biggest failure modes are clear from official docs and the product shape |
+| Stack | MEDIUM | Official Windows/Tauri docs are clear, but the exact native terminal rendering path still needs implementation-level validation |
+| Features | MEDIUM | Product expectations are consistent across `cmux`, WezTerm, and Windows Terminal, but v1 cuts remain judgment-based |
+| Architecture | MEDIUM | The component split is strong, but exact shell/core boundaries will matter in implementation |
+| Pitfalls | HIGH | The major Windows PTY and scope risks are clear and repeated across the ecosystem |
 
 **Overall confidence:** MEDIUM
 
 ### Gaps to Address
 
-- **Terminal renderer specifics:** confirm the exact native rendering approach during Phase 1 spike
-- **Packaging strategy:** decide packaged vs unpackaged distribution before Phase 3 notification work hardens
-- **Automation surface:** decide how much CLI/API scope belongs in v1.x after the core proves itself
+- **Terminal rendering/control strategy:** validate the specific UI approach during Phase 1 planning before locking the shell stack
+- **Notification packaging behavior:** verify installed-app constraints early so Windows toasts do not surprise the project late
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Microsoft Learn: ConPTY, Windows App SDK, Windows Terminal, app notifications
-- Tauri official docs: Tauri 2 overview, frontend model, shell plugin, notification plugin
-- `cmux` upstream README and "The Zen of cmux"
+- https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session - ConPTY architecture and deadlock constraints
+- https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/ - current native Windows desktop app stack
+- https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/ - Windows desktop notification model
+- https://v2.tauri.app/start/prerequisites/ - Tauri Windows prerequisites and runtime assumptions
+- https://www.cmux.dev/ - upstream product shape and principles
+- https://www.cmux.dev/docs/concepts - upstream tabs / panes / sessions concepts
+- https://www.cmux.dev/docs/notifications - upstream notification semantics
 
 ### Secondary (MEDIUM confidence)
-- xterm.js official repo and package documentation
+- https://wezterm.org/features.html - expected multiplexer feature baseline
+- https://wezterm.org/config/lua/wezterm.mux/index.html - workspace and mux reference patterns
+- https://learn.microsoft.com/en-us/windows/terminal/panes - Windows pane UX baseline
 
 ### Tertiary (LOW confidence)
-- None used materially for core recommendations
+- None
 
 ---
 *Research completed: 2026-03-06*
