@@ -60,24 +60,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | Unmapped | Pending |
-| SESS-02 | Unmapped | Pending |
-| SESS-03 | Unmapped | Pending |
-| LAYT-01 | Unmapped | Pending |
-| LAYT-02 | Unmapped | Pending |
-| LAYT-03 | Unmapped | Pending |
-| TABS-01 | Unmapped | Pending |
-| TABS-02 | Unmapped | Pending |
-| TABS-03 | Unmapped | Pending |
-| NOTF-01 | Unmapped | Pending |
-| NOTF-02 | Unmapped | Pending |
-| NOTF-03 | Unmapped | Pending |
+| SESS-01 | Phase 1 | Pending |
+| SESS-02 | Phase 1 | Pending |
+| SESS-03 | Phase 2 | Pending |
+| LAYT-01 | Phase 1 | Pending |
+| LAYT-02 | Phase 1 | Pending |
+| LAYT-03 | Phase 1 | Pending |
+| TABS-01 | Phase 2 | Pending |
+| TABS-02 | Phase 2 | Pending |
+| TABS-03 | Phase 2 | Pending |
+| NOTF-01 | Phase 3 | Pending |
+| NOTF-02 | Phase 3 | Pending |
+| NOTF-03 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after initial definition*
+*Last updated: 2026-03-06 after roadmap creation*
