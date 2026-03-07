@@ -1,0 +1,38 @@
+<Window
+    x:Class="Wcmux.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="wcmux">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Border
+            Margin="24"
+            Padding="24"
+            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="12">
+            <StackPanel Spacing="12">
+                <TextBlock
+                    FontSize="28"
+                    FontWeight="SemiBold"
+                    Text="wcmux" />
+                <TextBlock
+                    x:Name="SessionStatusText"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Preparing first terminal session..." />
+                <Border
+                    MinHeight="360"
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                    CornerRadius="8">
+                    <TextBlock
+                        x:Name="TerminalHostPlaceholder"
+                        FontFamily="Cascadia Mono"
+                        Text="Terminal surface will attach here in the next plan." />
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
