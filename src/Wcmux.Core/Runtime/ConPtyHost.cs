@@ -59,6 +59,19 @@ public sealed class ConPtyHost : IDisposable
             throw new InvalidOperationException(
                 $"CreatePseudoConsole failed with HRESULT 0x{hr:X8}");
         }
+
+        if (_pseudoConsoleHandle == IntPtr.Zero)
+        {
+            throw new InvalidOperationException("CreatePseudoConsole returned null handle");
+        }
+
+        // Close the pipe ends that the pseudoconsole now owns internally.
+        // These must be closed so the output pipe properly signals EOF when the
+        // pseudoconsole shuts down. The pseudoconsole duplicates these handles.
+        _inputReadSide?.Dispose();
+        _inputReadSide = null;
+        _outputWriteSide?.Dispose();
+        _outputWriteSide = null;
     }
 
     /// <summary>
@@ -104,6 +117,34 @@ public sealed class ConPtyHost : IDisposable
         }
     }
 
+    /// <summary>
+    /// Creates a pipe with non-inheritable handles using SECURITY_ATTRIBUTES.
+    /// </summary>
+    internal static void CreatePipeEx(out SafeFileHandle readSide, out SafeFileHandle writeSide)
+    {
+        var sa = new NativeMethods.SECURITY_ATTRIBUTES
+        {
+            nLength = Marshal.SizeOf<NativeMethods.SECURITY_ATTRIBUTES>(),
+            bInheritHandle = false,
+            lpSecurityDescriptor = IntPtr.Zero,
+        };
+
+        var saPtr = Marshal.AllocHGlobal(sa.nLength);
+        try
+        {
+            Marshal.StructureToPtr(sa, saPtr, false);
+            if (!NativeMethods.CreatePipe(out readSide, out writeSide, saPtr, 0))
+            {
+                throw new InvalidOperationException(
+                    $"CreatePipe failed with error {Marshal.GetLastWin32Error()}");
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(saPtr);
+        }
+    }
+
     internal static class NativeMethods
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -134,5 +175,14 @@ public sealed class ConPtyHost : IDisposable
             out SafeFileHandle hWritePipe,
             IntPtr lpPipeAttributes,
             uint nSize);
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SECURITY_ATTRIBUTES
+        {
+            public int nLength;
+            public IntPtr lpSecurityDescriptor;
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool bInheritHandle;
+        }
     }
 }

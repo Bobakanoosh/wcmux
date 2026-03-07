@@ -21,14 +21,20 @@ internal sealed partial class ConPtySession : ISession
     private readonly CancellationTokenSource _pumpCts = new();
     private readonly Task _outputPumpTask;
     private readonly Task _exitMonitorTask;
-    private readonly FileStream _inputStream;
     private readonly SemaphoreSlim _inputLock = new(1, 1);
     private volatile bool _closed;
     private string? _lastKnownCwd;
 
     public string SessionId { get; }
     public SessionLaunchSpec LaunchSpec { get; }
-    public bool IsRunning => !_process.HasExited;
+    public bool IsRunning
+    {
+        get
+        {
+            try { return !_process.HasExited; }
+            catch { return false; }
+        }
+    }
     public string? LastKnownCwd => _lastKnownCwd;
 
     private ConPtySession(
@@ -45,12 +51,9 @@ internal sealed partial class ConPtySession : ISession
         _emitEvent = emitEvent;
         _lastKnownCwd = launchSpec.InitialWorkingDirectory;
 
-        // Create a persistent input stream that does NOT own the handle
-        _inputStream = new FileStream(
-            new SafeFileHandle(ptyHost.InputWriteHandle.DangerousGetHandle(), ownsHandle: false),
-            FileAccess.Write, bufferSize: 256);
-
-        _outputPumpTask = Task.Run(() => OutputPumpAsync(_pumpCts.Token));
+        _outputPumpTask = Task.Factory.StartNew(
+            () => RunOutputPump(_pumpCts.Token),
+            TaskCreationOptions.LongRunning);
         _exitMonitorTask = Task.Run(() => MonitorExitAsync(_pumpCts.Token));
     }
 
@@ -92,13 +95,37 @@ internal sealed partial class ConPtySession : ISession
         await _inputLock.WaitAsync(cancellationToken);
         try
         {
-            await _inputStream.WriteAsync(data, cancellationToken);
-            await _inputStream.FlushAsync(cancellationToken);
+            // Use Win32 WriteFile directly -- anonymous pipes don't support
+            // overlapped IO and FileStream buffering can swallow writes
+            var pinned = data.ToArray();
+            bool ok = WriteFileNative.WriteFile(
+                _ptyHost.InputWriteHandle,
+                pinned,
+                (uint)pinned.Length,
+                out _,
+                IntPtr.Zero);
+            if (!ok)
+            {
+                throw new IOException(
+                    $"WriteFile to ConPTY input failed: {Marshal.GetLastWin32Error()}");
+            }
         }
         finally
         {
             _inputLock.Release();
         }
+    }
+
+    private static class WriteFileNative
+    {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool WriteFile(
+            SafeFileHandle hFile,
+            byte[] lpBuffer,
+            uint nNumberOfBytesToWrite,
+            out uint lpNumberOfBytesWritten,
+            IntPtr lpOverlapped);
     }
 
     public Task ResizeAsync(short columns, short rows, CancellationToken cancellationToken = default)
@@ -165,7 +192,6 @@ internal sealed partial class ConPtySession : ISession
             // Pump cleanup best-effort
         }
 
-        _inputStream.Dispose();
         _inputLock.Dispose();
         _ptyHost.Dispose();
         _process.Dispose();
@@ -176,37 +202,23 @@ internal sealed partial class ConPtySession : ISession
         await CloseAsync();
     }
 
-    private async Task OutputPumpAsync(CancellationToken ct)
+    private void RunOutputPump(CancellationToken ct)
     {
         var buffer = new byte[4096];
         try
         {
-            using var stream = new FileStream(
-                _ptyHost.OutputReadHandle,
-                FileAccess.Read,
-                bufferSize: 0,
-                isAsync: false);
-
             while (!ct.IsCancellationRequested)
             {
-                int bytesRead;
-                try
-                {
-                    bytesRead = await stream.ReadAsync(buffer.AsMemory(), ct);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (IOException)
-                {
-                    // Pipe broken -- process likely exited
-                    break;
-                }
+                bool ok = ReadFileNative.ReadFile(
+                    _ptyHost.OutputReadHandle,
+                    buffer,
+                    (uint)buffer.Length,
+                    out uint bytesRead,
+                    IntPtr.Zero);
 
-                if (bytesRead == 0) break;
+                if (!ok || bytesRead == 0) break;
 
-                var text = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                var text = Encoding.UTF8.GetString(buffer, 0, (int)bytesRead);
                 _emitEvent(new SessionOutputEvent(SessionId, text));
 
                 // Parse OSC 7 for cwd tracking
@@ -221,6 +233,18 @@ internal sealed partial class ConPtySession : ISession
         {
             // Output pump failed -- session is likely dead
         }
+    }
+
+    private static class ReadFileNative
+    {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool ReadFile(
+            SafeFileHandle hFile,
+            byte[] lpBuffer,
+            uint nNumberOfBytesToRead,
+            out uint lpNumberOfBytesRead,
+            IntPtr lpOverlapped);
     }
 
     private void TryParseCwdSignal(string text)
@@ -306,6 +330,9 @@ internal sealed partial class ConPtySession : ISession
     {
         var startupInfo = default(NativeMethods.STARTUPINFOEX);
         startupInfo.StartupInfo.cb = Marshal.SizeOf<NativeMethods.STARTUPINFOEX>();
+        // STARTF_USECOUNTCHARS bit -- sometimes needed to force ConPTY attachment
+        // on newer Windows builds where the default console inheritance overrides
+        // the pseudoconsole attribute.
 
         var lpSize = IntPtr.Zero;
 
@@ -320,6 +347,8 @@ internal sealed partial class ConPtySession : ISession
                 throw new InvalidOperationException(
                     $"InitializeProcThreadAttributeList failed: {Marshal.GetLastWin32Error()}");
 
+            // PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE: pass the HPCON value directly.
+            // The API treats this attribute value as the handle itself.
             if (!NativeMethods.UpdateProcThreadAttribute(
                     attributeList,
                     0,
@@ -359,8 +388,9 @@ internal sealed partial class ConPtySession : ISession
                     $"CreateProcess failed: {Marshal.GetLastWin32Error()}");
             }
 
-            // We don't need the thread handle
+            // Close both handles -- Process.GetProcessById opens its own handle
             NativeMethods.CloseHandle(processInfo.hThread);
+            NativeMethods.CloseHandle(processInfo.hProcess);
 
             return Process.GetProcessById(processInfo.dwProcessId);
         }
@@ -397,9 +427,9 @@ internal sealed partial class ConPtySession : ISession
     {
         internal const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
 
-        // 22 decimal = PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
+        // PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016
         internal static readonly IntPtr PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE =
-            (IntPtr)((0x00020000) | (22 & 0x0000FFFF));
+            (IntPtr)0x00020016;
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         internal struct STARTUPINFOEX
@@ -467,6 +497,7 @@ internal sealed partial class ConPtySession : ISession
             string? lpCurrentDirectory,
             ref STARTUPINFOEX lpStartupInfo,
             out PROCESS_INFORMATION lpProcessInformation);
+
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
