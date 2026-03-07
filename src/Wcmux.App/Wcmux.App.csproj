@@ -19,9 +19,16 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Wcmux.Core\Wcmux.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="TerminalWeb\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

@@ -11,7 +11,6 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         _sessionManager = new SessionManager();
-        _sessionManager.SessionEventReceived += OnSessionEvent;
         Activated += OnActivated;
         Closed += OnClosed;
     }
@@ -24,40 +23,25 @@ public sealed partial class MainWindow : Window
 
     internal async Task CreateInitialSessionAsync()
     {
-        SessionStatusText.Text = "Launching terminal session...";
         try
         {
             var spec = SessionLaunchSpec.CreateDefaultPowerShell(
                 Environment.CurrentDirectory);
             var session = await _sessionManager.CreateSessionAsync(spec);
-            SessionStatusText.Text = $"Session {session.SessionId[..8]} ready.";
+
+            // Attach the root pane to the new session
+            await RootPane.AttachAsync(_sessionManager, session);
         }
         catch (Exception ex)
         {
-            SessionStatusText.Text = $"Session failed: {ex.Message}";
+            // Show error in the window title if session creation fails
+            Title = $"wcmux - Session failed: {ex.Message}";
         }
-    }
-
-    private void OnSessionEvent(object? sender, SessionEvent evt)
-    {
-        // Marshal to UI thread for status updates
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            switch (evt)
-            {
-                case SessionReadyEvent ready:
-                    SessionStatusText.Text = $"Session {ready.SessionId[..8]} ready.";
-                    break;
-                case SessionExitedEvent exited:
-                    SessionStatusText.Text = $"Session {exited.SessionId[..8]} exited (code {exited.ExitCode}).";
-                    break;
-            }
-        });
     }
 
     private async void OnClosed(object sender, WindowEventArgs args)
     {
-        _sessionManager.SessionEventReceived -= OnSessionEvent;
+        await RootPane.DetachAsync();
         await _sessionManager.DisposeAsync();
     }
 }
