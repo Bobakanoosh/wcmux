@@ -2,18 +2,20 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Wcmux.App.Terminal;
 using Wcmux.Core.Runtime;
+using Wcmux.Core.Terminal;
 
 namespace Wcmux.App.Views;
 
 /// <summary>
 /// Native pane host that attaches a WebView2 terminal surface to a live
-/// ConPTY session. Owns the WebViewTerminalController lifecycle and bridges
-/// user input and session output through the controller without exposing
-/// xterm.js details to the rest of the app.
+/// ConPTY session. Uses a <see cref="TerminalSurfaceBridge"/> for output
+/// batching, input routing, resize debounce, and cwd tracking. Keeps
+/// xterm.js details out of the runtime core.
 /// </summary>
 public sealed partial class TerminalPaneView : UserControl
 {
     private WebViewTerminalController? _controller;
+    private TerminalSurfaceBridge? _bridge;
     private ISession? _session;
     private SessionManager? _sessionManager;
     private string? _sessionId;
@@ -32,8 +34,13 @@ public sealed partial class TerminalPaneView : UserControl
     public string? SessionId => _sessionId;
 
     /// <summary>
+    /// The bridge instance, if attached. Exposed for testing/inspection.
+    /// </summary>
+    internal TerminalSurfaceBridge? Bridge => _bridge;
+
+    /// <summary>
     /// Attaches this pane to a live session. Initializes the WebView2 terminal
-    /// surface and begins rendering session output.
+    /// surface and the bridge, then begins rendering session output.
     /// </summary>
     public async Task AttachAsync(SessionManager sessionManager, ISession session)
     {
@@ -52,7 +59,34 @@ public sealed partial class TerminalPaneView : UserControl
             onResize: OnTerminalResize,
             onReady: () => readyTcs.TrySetResult());
 
-        // Subscribe to session output events
+        // Create the bridge -- output writes go through the controller
+        // which must be called on the UI thread
+        _bridge = new TerminalSurfaceBridge(
+            _session,
+            writeToSurface: async text =>
+            {
+                // Marshal the batched output to the UI thread
+                var tcs = new TaskCompletionSource();
+                DispatcherQueue?.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        if (_controller is not null && _attached)
+                        {
+                            await _controller.WriteOutputAsync(text);
+                        }
+                    }
+                    finally
+                    {
+                        tcs.TrySetResult();
+                    }
+                });
+                await tcs.Task;
+            },
+            initialCols: session.LaunchSpec.InitialColumns,
+            initialRows: session.LaunchSpec.InitialRows);
+
+        // Subscribe to session output events and route through bridge
         _sessionManager.SessionEventReceived += OnSessionEvent;
 
         // Wait for the terminal surface to signal ready, with a timeout
@@ -73,7 +107,7 @@ public sealed partial class TerminalPaneView : UserControl
     }
 
     /// <summary>
-    /// Detaches from the current session and disposes the terminal controller.
+    /// Detaches from the current session and disposes the bridge and controller.
     /// </summary>
     public async Task DetachAsync()
     {
@@ -83,6 +117,12 @@ public sealed partial class TerminalPaneView : UserControl
         if (_sessionManager is not null)
         {
             _sessionManager.SessionEventReceived -= OnSessionEvent;
+        }
+
+        if (_bridge is not null)
+        {
+            await _bridge.DisposeAsync();
+            _bridge = null;
         }
 
         if (_controller is not null)
@@ -108,15 +148,15 @@ public sealed partial class TerminalPaneView : UserControl
 
     /// <summary>
     /// Handles keyboard/paste input from the terminal surface and routes
-    /// it to the ConPTY session.
+    /// it through the bridge to the ConPTY session.
     /// </summary>
     private async void OnTerminalInput(byte[] data)
     {
-        if (_session is null || !_session.IsRunning) return;
+        if (_bridge is null) return;
 
         try
         {
-            await _session.WriteInputAsync(data);
+            await _bridge.HandleInputAsync(data);
         }
         catch (ObjectDisposedException)
         {
@@ -129,31 +169,17 @@ public sealed partial class TerminalPaneView : UserControl
     }
 
     /// <summary>
-    /// Handles resize notifications from the terminal surface. Translates
-    /// the new column/row dimensions to the ConPTY pseudoconsole.
+    /// Handles resize notifications from the terminal surface. Routes
+    /// through the bridge for debounce and redundancy suppression.
     /// </summary>
-    private async void OnTerminalResize(int cols, int rows)
+    private void OnTerminalResize(int cols, int rows)
     {
-        if (_session is null || !_session.IsRunning) return;
-        if (cols <= 0 || rows <= 0) return;
-
-        try
-        {
-            await _session.ResizeAsync((short)cols, (short)rows);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Session was closed
-        }
-        catch (InvalidOperationException)
-        {
-            // Resize failed -- session may be shutting down
-        }
+        _bridge?.RequestResize(cols, rows);
     }
 
     /// <summary>
     /// Handles session events from the session manager. Routes output
-    /// to the terminal surface and handles session exit.
+    /// through the bridge for batching, and tracks cwd changes.
     /// </summary>
     private void OnSessionEvent(object? sender, SessionEvent evt)
     {
@@ -162,26 +188,16 @@ public sealed partial class TerminalPaneView : UserControl
         switch (evt)
         {
             case SessionOutputEvent output:
-                // Marshal to UI thread for WebView2 interaction
-                DispatcherQueue?.TryEnqueue(async () =>
-                {
-                    if (_controller is not null && _attached)
-                    {
-                        await _controller.WriteOutputAsync(output.Text);
-                    }
-                });
+                // Enqueue to bridge for batched delivery
+                _bridge?.EnqueueOutput(output.Text);
+                break;
+
+            case SessionCwdChangedEvent cwdEvt:
+                _bridge?.HandleCwdChanged(cwdEvt.WorkingDirectory);
                 break;
 
             case SessionExitedEvent:
-                // Session ended -- could show exit indicator in future
-                DispatcherQueue?.TryEnqueue(async () =>
-                {
-                    if (_controller is not null && _attached)
-                    {
-                        await _controller.WriteOutputAsync(
-                            "\r\n\x1b[90m[Session ended]\x1b[0m\r\n");
-                    }
-                });
+                _bridge?.EnqueueOutput("\r\n\x1b[90m[Session ended]\x1b[0m\r\n");
                 break;
         }
     }
