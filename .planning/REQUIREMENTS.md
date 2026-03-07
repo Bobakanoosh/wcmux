@@ -13,9 +13,9 @@
 
 ### Layout
 
-- [ ] **LAYT-01**: User can split the active pane horizontally.
-- [ ] **LAYT-02**: User can split the active pane vertically.
-- [ ] **LAYT-03**: User can move focus between panes and resize panes with keyboard-driven controls.
+- [x] **LAYT-01**: User can split the active pane horizontally.
+- [x] **LAYT-02**: User can split the active pane vertically.
+- [x] **LAYT-03**: User can move focus between panes and resize panes with keyboard-driven controls.
 
 ### Tabs
 
@@ -63,9 +63,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-01 | Phase 1 | Complete |
 | SESS-02 | Phase 1 | Complete |
 | SESS-03 | Phase 2 | Pending |
-| LAYT-01 | Phase 1 | Pending |
-| LAYT-02 | Phase 1 | Pending |
-| LAYT-03 | Phase 1 | Pending |
+| LAYT-01 | Phase 1 | Complete |
+| LAYT-02 | Phase 1 | Complete |
+| LAYT-03 | Phase 1 | Complete |
 | TABS-01 | Phase 2 | Pending |
 | TABS-02 | Phase 2 | Pending |
 | TABS-03 | Phase 2 | Pending |

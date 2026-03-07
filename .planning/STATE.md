@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 1
 current_phase_name: Terminal Runtime And Panes
-current_plan: 2
+current_plan: 3
 status: planning
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-03-07T03:06:17.733Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-03-07T03:15:54.114Z"
 last_activity: 2026-03-07
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 Current Phase: 1
 Current Phase Name: Terminal Runtime And Panes
 Total Phases: 3
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 3
 Status: Ready to plan
 Last Activity: 2026-03-07
@@ -51,6 +51,7 @@ Progress: [..........] 0%
 |-------|-------|-------|----------|
 | Phase 01 P01 | 37 | 3 tasks | 16 files |
 | Phase 01 P02 | 10 | 3 tasks | 14 files |
+| Phase 01 P03 | 7 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Moved TerminalSurfaceBridge to Wcmux.Core for testability without WinUI dependencies
 - [Phase 01]: Used CDN-hosted xterm.js with WebView2 for terminal rendering
 - [Phase 01]: Base64 encoding for WebView2 message transport of VT data
+- [Phase 01]: Immutable record-based split tree with pure reducer transitions for deterministic layout behavior
+- [Phase 01]: Geometric directional focus using pane rectangles rather than tree order
+- [Phase 01]: Ratio-based resize on ancestor split nodes with 0.1-0.9 clamping
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T03:06:17.731Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-03-07T03:15:54.112Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

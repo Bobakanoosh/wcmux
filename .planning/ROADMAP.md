@@ -12,7 +12,7 @@
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Terminal Runtime And Panes** - Build the ConPTY-backed session core and first-class pane splitting behavior.
+- [x] **Phase 1: Terminal Runtime And Panes** - Build the ConPTY-backed session core and first-class pane splitting behavior. (completed 2026-03-07)
 - [ ] **Phase 2: Tabbed Multiplexer Shell** - Add tabbed layouts, pane metadata, and stable session organization.
 - [ ] **Phase 3: Attention And Windows Integration** - Deliver generic attention state and Windows notifications without hard-coding tool-specific behavior.
 
@@ -72,6 +72,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Terminal Runtime And Panes | 0/3 | Not started | - |
+| 1. Terminal Runtime And Panes | 3/3 | Complete   | 2026-03-07 |
 | 2. Tabbed Multiplexer Shell | 0/3 | Not started | - |
 | 3. Attention And Windows Integration | 0/2 | Not started | - |
