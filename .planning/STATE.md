@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 1
 current_phase_name: Terminal Runtime And Panes
-current_plan: 0
+current_plan: 1
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-03-07T00:51:41.382Z"
-last_activity: 2026-03-06 - Roadmap created
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-03-07T02:53:36.782Z"
+last_activity: 2026-03-07
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 Current Phase: 1
 Current Phase Name: Terminal Runtime And Panes
 Total Phases: 3
-Current Plan: 0
+Current Plan: 1
 Total Plans in Phase: 3
 Status: Ready to plan
-Last Activity: 2026-03-06 - Roadmap created
+Last Activity: 2026-03-07
 
 Progress: [..........] 0%
 
@@ -49,13 +49,7 @@ Progress: [..........] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 0 | 0 min | 0 min |
-| 2 | 0 | 0 min | 0 min |
-| 3 | 0 | 0 min | 0 min |
-
-**Recent Trend:**
-- Last 5 plans: None yet
-- Trend: Stable
+| Phase 01 P01 | 37 | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -67,6 +61,9 @@ Recent decisions affecting current work:
 - [Init] Keep v1 terminal-first and defer browser parity, automation, and workspace persistence.
 - [Init] Research native Windows first while preserving a Tauri fallback through a shell-agnostic core.
 - [Roadmap] Put ConPTY fidelity and pane mechanics ahead of tabs and notifications.
+- [Phase 01]: Used kernel32.dll ConPTY interop directly rather than third-party library
+- [Phase 01]: Win32 WriteFile/ReadFile for ConPTY IO instead of FileStream wrappers
+- [Phase 01]: Discriminated record types for typed session events (ready, output, cwd, resize, exit)
 
 ### Pending Todos
 
@@ -79,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T00:51:22.987Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-terminal-runtime-and-panes/01-CONTEXT.md
+Last session: 2026-03-07T02:53:36.781Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
