@@ -8,6 +8,6 @@
     mc:Ignorable="d"
     Title="wcmux">
     <Grid Background="#1e1e1e">
-        <views:TerminalPaneView x:Name="RootPane" />
+        <views:WorkspaceView x:Name="Workspace" />
     </Grid>
 </Window>

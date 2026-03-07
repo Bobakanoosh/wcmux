@@ -1,4 +1,6 @@
 using Microsoft.UI.Xaml;
+using Wcmux.App.Commands;
+using Wcmux.App.ViewModels;
 using Wcmux.Core.Runtime;
 
 namespace Wcmux.App;
@@ -6,6 +8,7 @@ namespace Wcmux.App;
 public sealed partial class MainWindow : Window
 {
     private readonly SessionManager _sessionManager;
+    private WorkspaceViewModel? _viewModel;
 
     public MainWindow()
     {
@@ -14,6 +17,9 @@ public sealed partial class MainWindow : Window
         Activated += OnActivated;
         Closed += OnClosed;
     }
+
+    /// <summary>Exposed for testing.</summary>
+    internal WorkspaceViewModel? ViewModel => _viewModel;
 
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
@@ -29,19 +35,37 @@ public sealed partial class MainWindow : Window
                 Environment.CurrentDirectory);
             var session = await _sessionManager.CreateSessionAsync(spec);
 
-            // Attach the root pane to the new session
-            await RootPane.AttachAsync(_sessionManager, session);
+            var initialPaneId = Guid.NewGuid().ToString("N");
+            _viewModel = new WorkspaceViewModel(_sessionManager, initialPaneId, session);
+            _viewModel.LastPaneClosed += () =>
+            {
+                DispatcherQueue?.TryEnqueue(Close);
+            };
+
+            // Attach keyboard bindings to the window content
+            if (Content is UIElement rootElement)
+            {
+                PaneCommandBindings.Attach(rootElement, _viewModel);
+            }
+
+            // Attach workspace view
+            await Workspace.AttachAsync(_viewModel);
         }
         catch (Exception ex)
         {
-            // Show error in the window title if session creation fails
             Title = $"wcmux - Session failed: {ex.Message}";
         }
     }
 
     private async void OnClosed(object sender, WindowEventArgs args)
     {
-        await RootPane.DetachAsync();
+        await Workspace.DetachAsync();
+
+        if (_viewModel is not null)
+        {
+            await _viewModel.DisposeAsync();
+        }
+
         await _sessionManager.DisposeAsync();
     }
 }

@@ -1,0 +1,15 @@
+<UserControl
+    x:Class="Wcmux.App.Views.WorkspaceView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <!--
+        The workspace renders the split tree dynamically through code-behind.
+        The Canvas allows absolute positioning of panes from computed PaneRects.
+    -->
+    <Grid x:Name="RootContainer" Background="#1e1e1e"
+          SizeChanged="OnContainerSizeChanged" />
+</UserControl>
