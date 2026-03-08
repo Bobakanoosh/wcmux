@@ -18,6 +18,8 @@ public sealed partial class WorkspaceView : UserControl
     private readonly Dictionary<string, TerminalPaneView> _paneViews = new();
     private readonly SolidColorBrush _activeBorderBrush = new(Windows.UI.Color.FromArgb(255, 0, 122, 204));
     private readonly SolidColorBrush _inactiveBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
+    private readonly Dictionary<string, TextBlock> _paneTitles = new();
+    private readonly Dictionary<string, string> _paneSessionIds = new();
 
     public WorkspaceView()
     {
@@ -33,6 +35,7 @@ public sealed partial class WorkspaceView : UserControl
 
         _viewModel.LayoutChanged += OnLayoutChanged;
         _viewModel.ActivePaneChanged += OnActivePaneChanged;
+        _viewModel.SessionManager.SessionEventReceived += OnSessionEvent;
 
         // Set initial container size
         if (RootContainer.ActualWidth > 0 && RootContainer.ActualHeight > 0)
@@ -52,6 +55,7 @@ public sealed partial class WorkspaceView : UserControl
         {
             _viewModel.LayoutChanged -= OnLayoutChanged;
             _viewModel.ActivePaneChanged -= OnActivePaneChanged;
+            _viewModel.SessionManager.SessionEventReceived -= OnSessionEvent;
         }
 
         foreach (var paneView in _paneViews.Values)
@@ -59,6 +63,8 @@ public sealed partial class WorkspaceView : UserControl
             await paneView.DetachAsync();
         }
         _paneViews.Clear();
+        _paneTitles.Clear();
+        _paneSessionIds.Clear();
         RootContainer.Children.Clear();
         _viewModel = null;
     }
@@ -108,6 +114,8 @@ public sealed partial class WorkspaceView : UserControl
             {
                 await paneView.DetachAsync();
                 RootContainer.Children.Remove(GetPaneContainer(paneView));
+                _paneTitles.Remove(paneId);
+                _paneSessionIds.Remove(paneId);
             }
         }
 
@@ -159,8 +167,24 @@ public sealed partial class WorkspaceView : UserControl
         };
         splitButton.Click += OnSplitAffordanceClick;
 
+        // Pane title overlay showing current working directory
+        var titleBlock = new TextBlock
+        {
+            Text = PathHelper.TruncateCwdFromLeft(session.LastKnownCwd ?? ""),
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(180, 200, 200, 200)),
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            IsHitTestVisible = false,
+            Tag = paneId,
+        };
+        _paneTitles[paneId] = titleBlock;
+        _paneSessionIds[paneId] = session.SessionId;
+
         var grid = new Grid { Tag = paneId };
         grid.Children.Add(border);
+        grid.Children.Add(titleBlock);
         grid.Children.Add(splitButton);
 
         // Show/hide split button on hover
@@ -223,6 +247,25 @@ public sealed partial class WorkspaceView : UserControl
         if (_paneViews.TryGetValue(paneId, out var paneView))
         {
             await paneView.FocusTerminalAsync();
+        }
+    }
+
+    private void OnSessionEvent(object? sender, SessionEvent evt)
+    {
+        if (evt is SessionCwdChangedEvent cwdEvent)
+        {
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                // Find the pane associated with this session
+                foreach (var (paneId, sessionId) in _paneSessionIds)
+                {
+                    if (sessionId == cwdEvent.SessionId && _paneTitles.TryGetValue(paneId, out var titleBlock))
+                    {
+                        titleBlock.Text = PathHelper.TruncateCwdFromLeft(cwdEvent.WorkingDirectory);
+                        break;
+                    }
+                }
+            });
         }
     }
 
