@@ -80,9 +80,10 @@ public sealed partial class WorkspaceView : UserControl
 
     private void OnActivePaneChanged(string paneId)
     {
-        DispatcherQueue?.TryEnqueue(() =>
+        DispatcherQueue?.TryEnqueue(async () =>
         {
             UpdateActivePaneHighlight(paneId);
+            await FocusPaneAsync(paneId);
         });
     }
 
@@ -133,7 +134,7 @@ public sealed partial class WorkspaceView : UserControl
         var session = _viewModel.GetSessionForPane(paneId);
         if (session is null) return;
 
-        var paneView = new TerminalPaneView();
+        var paneView = new TerminalPaneView { PaneId = paneId };
 
         // Wrap in a border for active pane highlighting
         var border = new Border
@@ -144,16 +145,16 @@ public sealed partial class WorkspaceView : UserControl
             Tag = paneId,
         };
 
-        // Add split affordance button (top-right corner)
+        // Add split affordance button — hidden by default, shown on hover
         var splitButton = new Button
         {
             Content = new SymbolIcon(Symbol.Add),
             Width = 28,
             Height = 28,
-            Opacity = 0.6,
+            Opacity = 0,
             HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 4, 4, 0),
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, 14, 4),
             Tag = paneId,
         };
         splitButton.Click += OnSplitAffordanceClick;
@@ -162,12 +163,30 @@ public sealed partial class WorkspaceView : UserControl
         grid.Children.Add(border);
         grid.Children.Add(splitButton);
 
+        // Show/hide split button on hover
+        grid.PointerEntered += (s, e) => splitButton.Opacity = 0.7;
+        grid.PointerExited += (s, e) => splitButton.Opacity = 0;
+
         // Handle mouse click focus
         border.PointerPressed += (s, e) =>
         {
             _viewModel?.SetActivePane(paneId);
             e.Handled = false; // Let the event propagate to the terminal
         };
+
+        // Route pane commands from the terminal surface to the view model.
+        // Focus/resize commands operate on the current active pane (which may
+        // differ from the source pane if WebView2 focus hasn't caught up yet).
+        // Split/close commands activate the source pane first so they affect
+        // the pane the user is typing in.
+        paneView.CommandReceived += cmd => DispatcherQueue?.TryEnqueue(async () =>
+        {
+            if (IsPaneSpecificCommand(cmd) && paneView.PaneId is not null)
+            {
+                _viewModel?.SetActivePane(paneView.PaneId);
+            }
+            await HandlePaneCommandAsync(cmd);
+        });
 
         RootContainer.Children.Add(grid);
         _paneViews[paneId] = paneView;
@@ -192,6 +211,18 @@ public sealed partial class WorkspaceView : UserControl
         if (container is Grid grid && grid.Children.Count > 0 && grid.Children[0] is Border border)
         {
             border.BorderBrush = isActive ? _activeBorderBrush : _inactiveBorderBrush;
+        }
+    }
+
+    /// <summary>
+    /// Focuses the terminal WebView for the specified pane. Called externally
+    /// during tab switching to restore focus to the active pane.
+    /// </summary>
+    public async Task FocusPaneAsync(string paneId)
+    {
+        if (_paneViews.TryGetValue(paneId, out var paneView))
+        {
+            await paneView.FocusTerminalAsync();
         }
     }
 
@@ -220,6 +251,55 @@ public sealed partial class WorkspaceView : UserControl
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Returns true for commands that should activate the source pane first
+    /// (split, close). Focus/resize commands operate on the current active pane.
+    /// </summary>
+    private static bool IsPaneSpecificCommand(string command)
+        => command is "split-horizontal" or "split-vertical" or "close-pane";
+
+    private async Task HandlePaneCommandAsync(string command)
+    {
+        if (_viewModel is null) return;
+
+        switch (command)
+        {
+            case "split-horizontal":
+                await _viewModel.SplitActivePaneHorizontalAsync();
+                break;
+            case "split-vertical":
+                await _viewModel.SplitActivePaneVerticalAsync();
+                break;
+            case "close-pane":
+                await _viewModel.CloseActivePaneAsync();
+                break;
+            case "focus-left":
+                _viewModel.FocusLeft();
+                break;
+            case "focus-right":
+                _viewModel.FocusRight();
+                break;
+            case "focus-up":
+                _viewModel.FocusUp();
+                break;
+            case "focus-down":
+                _viewModel.FocusDown();
+                break;
+            case "resize-left":
+                _viewModel.ResizeActivePane(Direction.Left);
+                break;
+            case "resize-right":
+                _viewModel.ResizeActivePane(Direction.Right);
+                break;
+            case "resize-up":
+                _viewModel.ResizeActivePane(Direction.Up);
+                break;
+            case "resize-down":
+                _viewModel.ResizeActivePane(Direction.Down);
+                break;
+        }
     }
 
     private async void OnSplitAffordanceClick(object sender, RoutedEventArgs e)

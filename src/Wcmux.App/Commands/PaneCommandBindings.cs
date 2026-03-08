@@ -84,6 +84,16 @@ public static class PaneCommandBindings
             () => { viewModel.ResizeActivePane(Direction.Down); return Task.CompletedTask; });
     }
 
+    /// <summary>
+    /// Detaches all keyboard accelerators from the given UIElement.
+    /// Used when switching tabs to re-bind to the new active workspace.
+    /// </summary>
+    public static void Detach(UIElement target)
+    {
+        if (target is null) return;
+        target.KeyboardAccelerators.Clear();
+    }
+
     private static void AddAccelerator(
         UIElement target,
         VirtualKey key,

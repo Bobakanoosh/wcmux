@@ -8,6 +8,12 @@
     mc:Ignorable="d"
     Title="wcmux">
     <Grid Background="#1e1e1e">
-        <views:WorkspaceView x:Name="Workspace" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <views:TabBarView x:Name="TabBar" Grid.Row="0" />
+        <Grid x:Name="TabContentArea" Grid.Row="1" />
     </Grid>
 </Window>
