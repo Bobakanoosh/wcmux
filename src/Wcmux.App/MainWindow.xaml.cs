@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Wcmux.App.Commands;
+using Wcmux.App.Notifications;
 using Wcmux.App.ViewModels;
 using Wcmux.App.Views;
 using Wcmux.Core.Runtime;
@@ -13,6 +14,10 @@ public sealed partial class MainWindow : Window
     private TabViewModel? _tabViewModel;
     private readonly Dictionary<string, WorkspaceView> _tabViews = new();
     private string? _currentVisibleTabId;
+
+    private bool _isWindowFocused = true;
+    private NotificationService? _notificationService;
+    private bool _initialized;
 
     public MainWindow()
     {
@@ -28,8 +33,98 @@ public sealed partial class MainWindow : Window
 
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
-        Activated -= OnActivated;
+        // One-time initialization on first activation
+        if (!_initialized)
+        {
+            _initialized = true;
+            await InitializeAsync();
+        }
+
+        // Track window focus state for notification gating
+        var wasFocused = _isWindowFocused;
+        _isWindowFocused = args.WindowActivationState != WindowActivationState.Deactivated;
+
+        // On regain focus (transition from unfocused to focused): dismiss pending toasts
+        if (_isWindowFocused && !wasFocused && _notificationService is not null)
+        {
+            _ = _notificationService.DismissAllAsync();
+        }
+    }
+
+    private async Task InitializeAsync()
+    {
+        // Create NotificationService with the window handle for FlashWindowEx
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        _notificationService = new NotificationService(hwnd);
+
+        // Subscribe to toast activation deep-link callback
+        App.OnNotificationActivated += OnToastActivated;
+
+        // Subscribe to attention events for toast/flash when window is unfocused
+        _attentionStore.AttentionChanged += OnAttentionChangedForNotification;
+
         await CreateInitialTabAsync();
+    }
+
+    private void OnAttentionChangedForNotification(string paneId)
+    {
+        // Only fire toast when attention is raised AND window is not focused
+        if (!_attentionStore.HasAttention(paneId) || _isWindowFocused) return;
+        if (_tabViewModel is null || _notificationService is null) return;
+
+        // Find the tab and pane title for toast content
+        foreach (var tabId in _tabViewModel.TabStore.TabOrder)
+        {
+            var workspace = _tabViewModel.GetWorkspace(tabId);
+            if (workspace is null) continue;
+
+            if (workspace.LayoutStore.AllPaneIds.Contains(paneId))
+            {
+                var tab = _tabViewModel.TabStore.GetTab(tabId);
+                var tabLabel = tab?.Label ?? "Unknown";
+                var session = workspace.GetSessionForPane(paneId);
+                var paneTitle = session?.LastKnownCwd ?? "";
+
+                _notificationService.ShowAttentionToast(tabId, tabLabel, paneId, paneTitle);
+                _notificationService.FlashTaskbar();
+                return;
+            }
+        }
+    }
+
+    private void OnToastActivated(string tabId, string paneId)
+    {
+        // Marshal to UI thread -- NotificationInvoked fires from background thread
+        DispatcherQueue?.TryEnqueue(async () =>
+        {
+            if (_tabViewModel is null) return;
+
+            // Activate the window (bring to foreground)
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            SetForegroundWindowHelper(hwnd);
+            Activate();
+
+            // Switch to the target tab
+            _tabViewModel.SwitchTab(tabId);
+
+            // Focus the target pane
+            if (_tabViews.TryGetValue(tabId, out var workspaceView))
+            {
+                var workspace = _tabViewModel.GetWorkspace(tabId);
+                workspace?.SetActivePane(paneId);
+                await workspaceView.FocusPaneAsync(paneId);
+            }
+        });
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(
+        System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    private static void SetForegroundWindowHelper(IntPtr hwnd)
+    {
+        SetForegroundWindow(hwnd);
     }
 
     internal async Task CreateInitialTabAsync()
@@ -248,6 +343,13 @@ public sealed partial class MainWindow : Window
 
     private async void OnClosed(object sender, WindowEventArgs args)
     {
+        // Unsubscribe from notification activation
+        App.OnNotificationActivated -= OnToastActivated;
+        _attentionStore.AttentionChanged -= OnAttentionChangedForNotification;
+
+        // Unregister notifications
+        App.UnregisterNotifications();
+
         foreach (var view in _tabViews.Values)
         {
             await view.DetachAsync();
