@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: tabbed-multiplexer-shell
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-07
+audited: 2026-03-08
 ---
 
 # Phase 2 — Validation Strategy
@@ -38,12 +39,12 @@ created: 2026-03-07
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 1 | TABS-01 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.CreateTab" -v q` | ❌ W0 | ⬜ pending |
-| 02-01-02 | 01 | 1 | TABS-02 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.SwitchTab" -v q` | ❌ W0 | ⬜ pending |
-| 02-01-03 | 01 | 1 | TABS-03 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.CloseTab" -v q` | ❌ W0 | ⬜ pending |
-| 02-01-04 | 01 | 1 | TABS-01 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.LastPaneClosesTab" -v q` | ❌ W0 | ⬜ pending |
-| 02-01-05 | 01 | 1 | TABS-03 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.LastTabClosesApp" -v q` | ❌ W0 | ⬜ pending |
-| 02-02-01 | 02 | 2 | SESS-03 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.PaneMetadata" -v q` | ❌ W0 | ⬜ pending |
+| 02-01-01 | 01 | 1 | TABS-01 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.CreateTab" -v q` | ✅ TabStoreTests.cs | ✅ green (6 tests) |
+| 02-01-02 | 01 | 1 | TABS-02 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.SwitchTab" -v q` | ✅ TabStoreTests.cs | ✅ green (5 tests) |
+| 02-01-03 | 01 | 1 | TABS-03 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.CloseTab" -v q` | ✅ TabStoreTests.cs | ✅ green (8 tests) |
+| 02-01-04 | 01 | 1 | TABS-01 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.CloseTab_LastTab" -v q` | ✅ TabStoreTests.cs | ✅ green (2 tests) |
+| 02-01-05 | 01 | 1 | TABS-03 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~TabStoreTests.CloseTab_LastTab_FiresLastTabClosed" -v q` | ✅ TabStoreTests.cs | ✅ green |
+| 02-02-01 | 02 | 2 | SESS-03 | unit | `dotnet test tests/Wcmux.Tests --filter "FullyQualifiedName~PathHelperTests" -v q` | ✅ PathHelperTests.cs | ✅ green (13 tests) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,10 +52,10 @@ created: 2026-03-07
 
 ## Wave 0 Requirements
 
-- [ ] `tests/Wcmux.Tests/Layout/TabStoreTests.cs` — stubs for TABS-01, TABS-02, TABS-03 (core state)
-- [ ] Path truncation helper tests — covers SESS-03 display logic
+- [x] `tests/Wcmux.Tests/Layout/TabStoreTests.cs` — 27 tests for TABS-01, TABS-02, TABS-03 (core state)
+- [x] `tests/Wcmux.Tests/Layout/PathHelperTests.cs` — 13 tests covering SESS-03 display logic
 
-*Existing test infrastructure (xunit, project file) already in place.*
+*All Wave 0 tests created during TDD execution of Plan 01.*
 
 ---
 
@@ -69,11 +70,23 @@ created: 2026-03-07
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
+
+---
+
+## Validation Audit 2026-03-08
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+**Notes:** VALIDATION.md was created pre-execution with Wave 0 stubs. Plan 01 TDD execution created all 40 tests (27 TabStore + 13 PathHelper). All 6 task verification entries now map to existing, passing tests. CWD change event coverage also provided by 4 TerminalBridgeTests in Phase 1 test infrastructure.
