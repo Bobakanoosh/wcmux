@@ -30,9 +30,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Establish shell-agnostic core, session lifecycle, and ConPTY hosting primitives.
-- [ ] 01-02: Add terminal surface integration, resize handling, and fidelity checks for interactive TUIs.
-- [ ] 01-03: Implement split-tree layout state, pane creation, focus movement, and pane resizing.
+- [x] 01-01: Establish shell-agnostic core, session lifecycle, and ConPTY hosting primitives.
+- [x] 01-02: Add terminal surface integration, resize handling, and fidelity checks for interactive TUIs.
+- [x] 01-03: Implement split-tree layout state, pane creation, focus movement, and pane resizing.
 
 ### Phase 2: Tabbed Multiplexer Shell
 **Goal:** Organize live sessions into stable tabbed layouts with clear pane identity and shell/core boundaries.
@@ -43,12 +43,11 @@ Plans:
   2. Switching tabs preserves inactive tab state and does not disrupt their sessions.
   3. Closing a tab removes only that tab's layout and leaves other tabs intact.
   4. User can identify each pane through useful titles and current session context.
-**Plans**: 3 plans
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Build the shell layer for tab creation, switching, and close semantics over the core state model.
-- [ ] 02-02: Add pane and tab metadata flow, including titles and session-context labeling.
-- [ ] 02-03: Harden shell/core boundaries so the UI shell remains replaceable while tab state stays deterministic.
+- [ ] 02-01-PLAN.md — TDD: Core tab state model (TabStore) and path display helper (PathHelper) with full test coverage.
+- [ ] 02-02-PLAN.md — Wire tab lifecycle through app shell: TabViewModel, TabBarView, keyboard shortcuts, pane border titles.
 
 ### Phase 3: Attention And Windows Integration
 **Goal:** Make background sessions visible through generic attention handling and native Windows notifications.
@@ -73,5 +72,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Terminal Runtime And Panes | 3/3 | Complete   | 2026-03-07 |
-| 2. Tabbed Multiplexer Shell | 0/3 | Not started | - |
+| 2. Tabbed Multiplexer Shell | 0/2 | Not started | - |
 | 3. Attention And Windows Integration | 0/2 | Not started | - |
