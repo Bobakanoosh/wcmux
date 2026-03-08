@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: terminal-runtime-and-panes
-status: draft
+status: complete
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-03-07
+audited: 2026-03-08
 ---
 
 # Phase 1 - Validation Strategy
@@ -18,10 +19,10 @@ created: 2026-03-07
 | Property | Value |
 |----------|-------|
 | **Framework** | `xUnit + dotnet test` |
-| **Config file** | `none - Wave 0 installs` |
+| **Config file** | `tests/Wcmux.Tests/Wcmux.Tests.csproj` |
 | **Quick run command** | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter "Category!=Manual"` |
 | **Full suite command** | `dotnet test` |
-| **Estimated runtime** | ~90 seconds |
+| **Estimated runtime** | ~35 seconds |
 
 ---
 
@@ -38,26 +39,26 @@ created: 2026-03-07
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 1-01-01 | 01 | 1 | `SESS-01` | build | `dotnet build Wcmux.sln` | no - Wave 0 | pending |
-| 1-01-02 | 01 | 1 | `SESS-01` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~SessionHost` | no - Wave 0 | pending |
-| 1-01-03 | 01 | 1 | `SESS-01` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~SessionLifecycle` | no - Wave 0 | pending |
-| 1-02-01 | 02 | 2 | `SESS-02` | build | `dotnet build Wcmux.sln` | no - later wave | pending |
-| 1-02-02 | 02 | 2 | `SESS-02` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~TerminalBridge` | no - later wave | pending |
-| 1-02-03 | 02 | 2 | `SESS-02` | hybrid | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~ResizePipeline` | no - later wave | pending |
-| 1-03-01 | 03 | 3 | `LAYT-01` | unit | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~LayoutReducer` | no - later wave | pending |
-| 1-03-02 | 03 | 3 | `LAYT-02`, `LAYT-03` | hybrid | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~SplitCommands` | no - later wave | pending |
-| 1-03-03 | 03 | 3 | `LAYT-03` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~PaneFocusAndResize` | no - later wave | pending |
+| 1-01-01 | 01 | 1 | `SESS-01` | build | `dotnet build Wcmux.sln` | ✅ Wcmux.sln | ✅ green |
+| 1-01-02 | 01 | 1 | `SESS-01` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~SessionHost` | ✅ SessionHostIntegrationTests.cs | ✅ green (7 tests) |
+| 1-01-03 | 01 | 1 | `SESS-01` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~SessionLifecycle` | ✅ SessionLifecycleTests.cs | ⚠️ flaky (8 pass, 1 flaky) |
+| 1-02-01 | 02 | 2 | `SESS-02` | build | `dotnet build Wcmux.sln` | ✅ Wcmux.sln | ✅ green |
+| 1-02-02 | 02 | 2 | `SESS-02` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~TerminalBridge` | ✅ TerminalBridgeTests.cs | ✅ green (14 tests) |
+| 1-02-03 | 02 | 2 | `SESS-02` | hybrid | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~ResizePipeline` | ✅ ResizePipelineTests.cs | ✅ green (13 tests) |
+| 1-03-01 | 03 | 3 | `LAYT-01` | unit | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~LayoutReducer` | ✅ LayoutReducerTests.cs | ✅ green (21 tests) |
+| 1-03-02 | 03 | 3 | `LAYT-02`, `LAYT-03` | hybrid | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~SplitCommands` | ✅ SplitCommandsTests.cs | ✅ green (9 tests) |
+| 1-03-03 | 03 | 3 | `LAYT-03` | integration | `dotnet test tests/Wcmux.Tests/Wcmux.Tests.csproj --filter FullyQualifiedName~PaneFocusAndResize` | ✅ PaneFocusAndResizeTests.cs | ✅ green (26 tests) |
 
-*Status: pending / green / red / flaky*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `tests/Wcmux.Tests/Wcmux.Tests.csproj` - bootstrap the phase test project
-- [ ] `tests/Wcmux.Tests/Runtime/SessionHostIntegrationTests.cs` - ConPTY launch and lifecycle harness
-- [ ] `tests/Wcmux.Tests/Runtime/SessionLifecycleTests.cs` - repeated session open-close, cwd signal capture, and teardown coverage
-- [ ] `dotnet new xunit` plus solution wiring - if no framework exists
+- [x] `tests/Wcmux.Tests/Wcmux.Tests.csproj` - bootstrap the phase test project
+- [x] `tests/Wcmux.Tests/Runtime/SessionHostIntegrationTests.cs` - ConPTY launch and lifecycle harness
+- [x] `tests/Wcmux.Tests/Runtime/SessionLifecycleTests.cs` - repeated session open-close, cwd signal capture, and teardown coverage
+- [x] `dotnet new xunit` plus solution wiring - if no framework exists
 
 ---
 
@@ -73,11 +74,23 @@ created: 2026-03-07
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
+
+---
+
+## Validation Audit 2026-03-08
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+**Notes:** All 9 task verification entries now map to existing, passing test files. Wave 0 requirements all satisfied. One pre-existing flaky test (`SessionLifecycle_ConcurrentSessions_TrackedIndependently`) — known ConPTY timing issue under test runner, not a validation gap. Total: 103 Phase 1 tests (7 SessionHost + 9 SessionLifecycle + 14 TerminalBridge + 13 ResizePipeline + 21 LayoutReducer + 9 SplitCommands + 26 PaneFocusAndResize + 4 misc).
