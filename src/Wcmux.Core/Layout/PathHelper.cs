@@ -61,12 +61,10 @@ public static class PathHelper
         }
 
         // Replace home prefix with ~
-        bool isUnderHome = false;
         if (!string.IsNullOrEmpty(home) &&
             path.StartsWith(home, StringComparison.OrdinalIgnoreCase))
         {
             path = "~" + path[home.Length..];
-            isUnderHome = true;
         }
 
         // Normalize separators
