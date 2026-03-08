@@ -25,9 +25,9 @@
 
 ### Notifications
 
-- [ ] **NOTF-01**: User can see when a pane or tab needs attention through in-app unread or attention indicators.
+- [x] **NOTF-01**: User can see when a pane or tab needs attention through in-app unread or attention indicators.
 - [ ] **NOTF-02**: User receives a Windows desktop notification when a non-focused session needs attention.
-- [ ] **NOTF-03**: User can receive attention notifications from generic terminal sessions rather than from a single hard-coded AI tool.
+- [x] **NOTF-03**: User can receive attention notifications from generic terminal sessions rather than from a single hard-coded AI tool.
 
 ## v2 Requirements
 
@@ -69,9 +69,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TABS-01 | Phase 2 | Complete |
 | TABS-02 | Phase 2 | Complete |
 | TABS-03 | Phase 2 | Complete |
-| NOTF-01 | Phase 3 | Pending |
+| NOTF-01 | Phase 3 | Complete |
 | NOTF-02 | Phase 3 | Pending |
-| NOTF-03 | Phase 3 | Pending |
+| NOTF-03 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 12 total

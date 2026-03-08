@@ -73,4 +73,4 @@ Phases execute in numeric order: 1 -> 2 -> 3
 |-------|----------------|--------|-----------|
 | 1. Terminal Runtime And Panes | 3/3 | Complete   | 2026-03-07 |
 | 2. Tabbed Multiplexer Shell | 0/2 | Not started | - |
-| 3. Attention And Windows Integration | 0/2 | Not started | - |
+| 3. Attention And Windows Integration | 1/2 | In Progress|  |
