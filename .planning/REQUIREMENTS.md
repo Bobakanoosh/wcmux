@@ -9,7 +9,7 @@
 
 - [x] **SESS-01**: User can open a real Windows terminal session inside the app using ConPTY-backed hosting for supported shells.
 - [x] **SESS-02**: User can interact with full-screen terminal apps and prompts without losing expected input, output, resize, or exit behavior.
-- [ ] **SESS-03**: User can see identifying metadata for each pane, including a useful title and current session context.
+- [x] **SESS-03**: User can see identifying metadata for each pane, including a useful title and current session context.
 
 ### Layout
 
@@ -62,7 +62,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SESS-01 | Phase 1 | Complete |
 | SESS-02 | Phase 1 | Complete |
-| SESS-03 | Phase 2 | Pending |
+| SESS-03 | Phase 2 | Complete |
 | LAYT-01 | Phase 1 | Complete |
 | LAYT-02 | Phase 1 | Complete |
 | LAYT-03 | Phase 1 | Complete |
