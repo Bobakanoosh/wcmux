@@ -11,3 +11,5 @@ public sealed record SessionCwdChangedEvent(string SessionId, string WorkingDire
 public sealed record SessionResizedEvent(string SessionId, int Columns, int Rows) : SessionEvent(SessionId);
 
 public sealed record SessionExitedEvent(string SessionId, int? ExitCode) : SessionEvent(SessionId);
+
+public sealed record SessionBellEvent(string SessionId) : SessionEvent(SessionId);

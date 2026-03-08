@@ -44,6 +44,13 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
     public event Action<string>? CwdChanged;
 
     /// <summary>
+    /// Fired when a bell character (0x07) is detected in the output stream.
+    /// Multiple bells in a single batch result in a single invocation.
+    /// The bell character is stripped from the output before delivery to the surface.
+    /// </summary>
+    public event Action? BellDetected;
+
+    /// <summary>
     /// The last known working directory reported by the session.
     /// </summary>
     public string? LastKnownCwd => _lastKnownCwd;
@@ -258,9 +265,21 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
             if (sb.Length == 0) continue;
 
             TotalOutputBatches++;
+
+            var batch = sb.ToString();
+
+            // Detect and strip bell characters before delivering to surface
+            if (batch.Contains('\u0007'))
+            {
+                batch = batch.Replace("\u0007", "");
+                BellDetected?.Invoke();
+            }
+
+            if (batch.Length == 0) continue;
+
             try
             {
-                await _writeToSurface(sb.ToString());
+                await _writeToSurface(batch);
             }
             catch
             {
