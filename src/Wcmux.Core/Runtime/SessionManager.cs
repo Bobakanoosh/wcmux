@@ -68,6 +68,15 @@ public sealed class SessionManager : IAsyncDisposable
         _sessions.Clear();
     }
 
+    /// <summary>
+    /// Raises a session event through the event bus. Used for synthetic events
+    /// like SessionBellEvent that originate outside the ConPTY session.
+    /// </summary>
+    public void RaiseEvent(SessionEvent evt)
+    {
+        SessionEventReceived?.Invoke(this, evt);
+    }
+
     private void OnSessionEvent(SessionEvent evt)
     {
         if (evt is SessionExitedEvent)

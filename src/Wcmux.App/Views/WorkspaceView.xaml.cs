@@ -15,11 +15,14 @@ namespace Wcmux.App.Views;
 public sealed partial class WorkspaceView : UserControl
 {
     private WorkspaceViewModel? _viewModel;
+    private AttentionStore? _attentionStore;
     private readonly Dictionary<string, TerminalPaneView> _paneViews = new();
     private readonly SolidColorBrush _activeBorderBrush = new(Windows.UI.Color.FromArgb(255, 0, 122, 204));
     private readonly SolidColorBrush _inactiveBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
+    private readonly SolidColorBrush _attentionBorderBrush = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
     private readonly Dictionary<string, TextBlock> _paneTitles = new();
     private readonly Dictionary<string, string> _paneSessionIds = new();
+    private readonly Dictionary<string, DispatcherTimer> _blinkTimers = new();
 
     /// <summary>Fired when a terminal requests a tab-level command (e.g., new-tab).</summary>
     public event Func<string, Task>? TabCommandReceived;
@@ -32,13 +35,19 @@ public sealed partial class WorkspaceView : UserControl
     /// <summary>
     /// Attaches a workspace view model and renders the initial layout.
     /// </summary>
-    public async Task AttachAsync(WorkspaceViewModel viewModel)
+    public async Task AttachAsync(WorkspaceViewModel viewModel, AttentionStore? attentionStore = null)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        _attentionStore = attentionStore;
 
         _viewModel.LayoutChanged += OnLayoutChanged;
         _viewModel.ActivePaneChanged += OnActivePaneChanged;
         _viewModel.SessionManager.SessionEventReceived += OnSessionEvent;
+
+        if (_attentionStore is not null)
+        {
+            _attentionStore.AttentionChanged += OnAttentionChanged;
+        }
 
         // Set initial container size
         if (RootContainer.ActualWidth > 0 && RootContainer.ActualHeight > 0)
@@ -61,6 +70,18 @@ public sealed partial class WorkspaceView : UserControl
             _viewModel.SessionManager.SessionEventReceived -= OnSessionEvent;
         }
 
+        if (_attentionStore is not null)
+        {
+            _attentionStore.AttentionChanged -= OnAttentionChanged;
+        }
+
+        // Stop all blink timers
+        foreach (var timer in _blinkTimers.Values)
+        {
+            timer.Stop();
+        }
+        _blinkTimers.Clear();
+
         foreach (var paneView in _paneViews.Values)
         {
             await paneView.DetachAsync();
@@ -70,6 +91,7 @@ public sealed partial class WorkspaceView : UserControl
         _paneSessionIds.Clear();
         RootContainer.Children.Clear();
         _viewModel = null;
+        _attentionStore = null;
     }
 
     private void OnContainerSizeChanged(object sender, SizeChangedEventArgs e)
@@ -119,6 +141,8 @@ public sealed partial class WorkspaceView : UserControl
                 RootContainer.Children.Remove(GetPaneContainer(paneView));
                 _paneTitles.Remove(paneId);
                 _paneSessionIds.Remove(paneId);
+                StopBlinkTimer(paneId);
+                _attentionStore?.RemovePane(paneId);
             }
         }
 
@@ -234,11 +258,8 @@ public sealed partial class WorkspaceView : UserControl
         container.HorizontalAlignment = HorizontalAlignment.Left;
         container.VerticalAlignment = VerticalAlignment.Top;
 
-        // Update border highlight
-        if (container is Grid grid && grid.Children.Count > 0 && grid.Children[0] is Border border)
-        {
-            border.BorderBrush = isActive ? _activeBorderBrush : _inactiveBorderBrush;
-        }
+        // Update visual state (border, opacity, attention)
+        UpdatePaneVisualState(paneId);
     }
 
     /// <summary>
@@ -272,17 +293,94 @@ public sealed partial class WorkspaceView : UserControl
         }
     }
 
+    private void OnAttentionChanged(string paneId)
+    {
+        DispatcherQueue?.TryEnqueue(() =>
+        {
+            if (_viewModel is null || _attentionStore is null) return;
+            UpdatePaneVisualState(paneId);
+        });
+    }
+
     private void UpdateActivePaneHighlight(string activePaneId)
     {
         foreach (var (paneId, view) in _paneViews)
         {
-            var container = GetPaneContainer(view);
-            if (container is Grid grid && grid.Children.Count > 0 && grid.Children[0] is Border border)
+            UpdatePaneVisualState(paneId);
+        }
+    }
+
+    private void UpdatePaneVisualState(string paneId)
+    {
+        if (_viewModel is null) return;
+        if (!_paneViews.TryGetValue(paneId, out var view)) return;
+
+        var container = GetPaneContainer(view);
+        if (container is not Grid grid || grid.Children.Count == 0 || grid.Children[0] is not Border border)
+            return;
+
+        var isActive = paneId == _viewModel.LayoutStore.ActivePaneId;
+        var hasAttention = _attentionStore?.HasAttention(paneId) ?? false;
+
+        if (isActive)
+        {
+            // Active pane: full opacity, active border, stop blink
+            container.Opacity = 1.0;
+            border.BorderBrush = _activeBorderBrush;
+            StopBlinkTimer(paneId);
+        }
+        else if (hasAttention)
+        {
+            // Inactive pane with attention: dimmed, blinking blue border
+            container.Opacity = 0.5;
+            StartBlinkAnimation(paneId, border);
+        }
+        else
+        {
+            // Inactive pane without attention: dimmed, gray border
+            container.Opacity = 0.5;
+            border.BorderBrush = _inactiveBorderBrush;
+            StopBlinkTimer(paneId);
+        }
+    }
+
+    private void StartBlinkAnimation(string paneId, Border border)
+    {
+        // Don't restart if already blinking
+        if (_blinkTimers.ContainsKey(paneId)) return;
+
+        var transparent = new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+        int toggleCount = 0;
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        timer.Tick += (s, e) =>
+        {
+            toggleCount++;
+            if (toggleCount >= 8) // 4 full blinks (on/off pairs)
             {
-                border.BorderBrush = paneId == activePaneId
-                    ? _activeBorderBrush
-                    : _inactiveBorderBrush;
+                // Settle to steady attention color
+                border.BorderBrush = _attentionBorderBrush;
+                timer.Stop();
+                _blinkTimers.Remove(paneId);
+                return;
             }
+
+            border.BorderBrush = (toggleCount % 2 == 0)
+                ? _attentionBorderBrush
+                : transparent;
+        };
+
+        // Start with attention color visible
+        border.BorderBrush = _attentionBorderBrush;
+        _blinkTimers[paneId] = timer;
+        timer.Start();
+    }
+
+    private void StopBlinkTimer(string paneId)
+    {
+        if (_blinkTimers.Remove(paneId, out var timer))
+        {
+            timer.Stop();
         }
     }
 

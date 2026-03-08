@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Wcmux.App.ViewModels;
+using Wcmux.Core.Runtime;
 
 namespace Wcmux.App.Views;
 
@@ -12,6 +13,10 @@ namespace Wcmux.App.Views;
 public sealed partial class TabBarView : UserControl
 {
     private TabViewModel? _viewModel;
+    private AttentionStore? _attentionStore;
+    private readonly SolidColorBrush _attentionForeground = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
+    private readonly SolidColorBrush _defaultForeground = new(Windows.UI.Color.FromArgb(255, 204, 204, 204));
+    private readonly Dictionary<string, DispatcherTimer> _tabBlinkTimers = new();
 
     /// <summary>Fired when the user clicks the [+] button to request a new tab.</summary>
     public event Func<Task>? NewTabRequested;
@@ -24,17 +29,26 @@ public sealed partial class TabBarView : UserControl
     /// <summary>
     /// Attaches to a TabViewModel and subscribes to tab events.
     /// </summary>
-    public void Attach(TabViewModel viewModel)
+    public void Attach(TabViewModel viewModel, AttentionStore? attentionStore = null)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        _attentionStore = attentionStore;
         _viewModel.TabStore.TabsChanged += OnTabsChanged;
         _viewModel.TabStore.ActiveTabChanged += OnActiveTabChanged;
+
+        if (_attentionStore is not null)
+        {
+            _attentionStore.AttentionChanged += OnAttentionChanged;
+        }
+
         RenderTabs();
     }
 
     private void OnTabsChanged() => DispatcherQueue?.TryEnqueue(RenderTabs);
 
     private void OnActiveTabChanged(string _) => DispatcherQueue?.TryEnqueue(RenderTabs);
+
+    private void OnAttentionChanged(string _) => DispatcherQueue?.TryEnqueue(RenderTabs);
 
     private void OnAddTabClick(object sender, RoutedEventArgs e)
     {
@@ -48,6 +62,13 @@ public sealed partial class TabBarView : UserControl
     {
         if (_viewModel is null) return;
 
+        // Stop all existing blink timers before re-rendering
+        foreach (var timer in _tabBlinkTimers.Values)
+        {
+            timer.Stop();
+        }
+        _tabBlinkTimers.Clear();
+
         TabStrip.Children.Clear();
 
         var activeTabId = _viewModel.TabStore.ActiveTabId;
@@ -58,12 +79,25 @@ public sealed partial class TabBarView : UserControl
             if (tab is null) continue;
 
             var isActive = tabId == activeTabId;
-            var tabItem = CreateTabItem(tabId, tab.Label, isActive);
+
+            // Check if this tab has any panes with attention
+            var hasAttention = false;
+            if (!isActive && _attentionStore is not null)
+            {
+                var workspace = _viewModel.GetWorkspace(tabId);
+                if (workspace is not null)
+                {
+                    var paneIds = workspace.LayoutStore.AllPaneIds;
+                    hasAttention = _attentionStore.TabHasAttention(paneIds);
+                }
+            }
+
+            var tabItem = CreateTabItem(tabId, tab.Label, isActive, hasAttention);
             TabStrip.Children.Add(tabItem);
         }
     }
 
-    private Grid CreateTabItem(string tabId, string label, bool isActive)
+    private Grid CreateTabItem(string tabId, string label, bool isActive, bool hasAttention = false)
     {
         var grid = new Grid
         {
@@ -79,15 +113,23 @@ public sealed partial class TabBarView : UserControl
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+        var foreground = hasAttention ? _attentionForeground : _defaultForeground;
+
         var labelBlock = new TextBlock
         {
             Text = label,
             FontSize = 12,
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204)),
+            Foreground = foreground,
             VerticalAlignment = VerticalAlignment.Center,
             Padding = new Thickness(12, 0, 4, 0),
             Tag = tabId,
         };
+
+        // Start blink animation for attention tabs
+        if (hasAttention)
+        {
+            StartTabBlinkAnimation(tabId, labelBlock);
+        }
         Grid.SetColumn(labelBlock, 0);
 
         // Double-click to rename
@@ -127,6 +169,31 @@ public sealed partial class TabBarView : UserControl
         grid.Children.Add(closeButton);
 
         return grid;
+    }
+
+    private void StartTabBlinkAnimation(string tabId, TextBlock labelBlock)
+    {
+        int toggleCount = 0;
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        timer.Tick += (s, e) =>
+        {
+            toggleCount++;
+            if (toggleCount >= 8) // 4 full blinks
+            {
+                labelBlock.Foreground = _attentionForeground;
+                timer.Stop();
+                _tabBlinkTimers.Remove(tabId);
+                return;
+            }
+
+            labelBlock.Foreground = (toggleCount % 2 == 0)
+                ? _attentionForeground
+                : _defaultForeground;
+        };
+
+        _tabBlinkTimers[tabId] = timer;
+        timer.Start();
     }
 
     private void StartInlineRename(Grid tabItemGrid, string tabId, string currentLabel)

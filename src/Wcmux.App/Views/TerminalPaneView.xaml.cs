@@ -21,6 +21,12 @@ public sealed partial class TerminalPaneView : UserControl
     private string? _sessionId;
     private bool _attached;
 
+    /// <summary>Fired when a pane command keybind is pressed inside this pane's terminal.</summary>
+    public event Action<string>? CommandReceived;
+
+    /// <summary>The pane ID this view represents in the layout tree.</summary>
+    public string? PaneId { get; set; }
+
     public TerminalPaneView()
     {
         InitializeComponent();
@@ -57,7 +63,8 @@ public sealed partial class TerminalPaneView : UserControl
         await _controller.InitializeAsync(
             onInput: OnTerminalInput,
             onResize: OnTerminalResize,
-            onReady: () => readyTcs.TrySetResult());
+            onReady: () => readyTcs.TrySetResult(),
+            onCommand: cmd => CommandReceived?.Invoke(cmd));
 
         // Create the bridge -- output writes go through the controller
         // which must be called on the UI thread
@@ -86,6 +93,9 @@ public sealed partial class TerminalPaneView : UserControl
             initialCols: session.LaunchSpec.InitialColumns,
             initialRows: session.LaunchSpec.InitialRows);
 
+        // Subscribe to bell detection and route as SessionBellEvent
+        _bridge.BellDetected += OnBellDetected;
+
         // Subscribe to session output events and route through bridge
         _sessionManager.SessionEventReceived += OnSessionEvent;
 
@@ -107,6 +117,17 @@ public sealed partial class TerminalPaneView : UserControl
     }
 
     /// <summary>
+    /// Focuses the terminal surface inside this pane.
+    /// </summary>
+    public async Task FocusTerminalAsync()
+    {
+        if (_controller is not null && _attached)
+        {
+            await _controller.FocusAsync();
+        }
+    }
+
+    /// <summary>
     /// Detaches from the current session and disposes the bridge and controller.
     /// </summary>
     public async Task DetachAsync()
@@ -121,6 +142,7 @@ public sealed partial class TerminalPaneView : UserControl
 
         if (_bridge is not null)
         {
+            _bridge.BellDetected -= OnBellDetected;
             await _bridge.DisposeAsync();
             _bridge = null;
         }
@@ -144,6 +166,18 @@ public sealed partial class TerminalPaneView : UserControl
     private async void OnUnloaded(object sender, RoutedEventArgs e)
     {
         await DetachAsync();
+    }
+
+    /// <summary>
+    /// Handles bell detection from the bridge. Raises a SessionBellEvent
+    /// through the session manager's event bus.
+    /// </summary>
+    private void OnBellDetected()
+    {
+        if (_sessionId is not null && _sessionManager is not null)
+        {
+            _sessionManager.RaiseEvent(new SessionBellEvent(_sessionId));
+        }
     }
 
     /// <summary>

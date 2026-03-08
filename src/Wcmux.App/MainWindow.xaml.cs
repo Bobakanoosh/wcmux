@@ -9,6 +9,7 @@ namespace Wcmux.App;
 public sealed partial class MainWindow : Window
 {
     private readonly SessionManager _sessionManager;
+    private readonly AttentionStore _attentionStore = new();
     private TabViewModel? _tabViewModel;
     private readonly Dictionary<string, WorkspaceView> _tabViews = new();
     private string? _currentVisibleTabId;
@@ -17,6 +18,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         _sessionManager = new SessionManager();
+        _sessionManager.SessionEventReceived += OnGlobalSessionEvent;
         Activated += OnActivated;
         Closed += OnClosed;
     }
@@ -44,8 +46,8 @@ public sealed partial class MainWindow : Window
             _tabViewModel.TabStore.ActiveTabChanged += OnActiveTabChanged;
             _tabViewModel.TabStore.TabsChanged += OnTabsChanged;
 
-            // Attach tab bar
-            TabBar.Attach(_tabViewModel);
+            // Attach tab bar with attention store
+            TabBar.Attach(_tabViewModel, _attentionStore);
             TabBar.NewTabRequested += () => CreateNewTabWithViewAsync();
 
             // Attach tab command bindings (persistent, not re-attached on tab switch)
@@ -110,12 +112,18 @@ public sealed partial class MainWindow : Window
         _tabViews[tabId] = view;
         TabContentArea.Children.Add(view);
 
+        // Wire attention clearing when pane gets focus
+        workspace.ActivePaneChanged += paneId =>
+        {
+            _attentionStore.ClearAttention(paneId);
+        };
+
         // Only show the active tab's view
         if (tabId == _tabViewModel.TabStore.ActiveTabId)
         {
             view.Visibility = Visibility.Visible;
             _currentVisibleTabId = tabId;
-            await view.AttachAsync(workspace);
+            await view.AttachAsync(workspace, _attentionStore);
         }
         else
         {
@@ -210,6 +218,32 @@ public sealed partial class MainWindow : Window
         var idx = oneBasedIndex - 1;
         if (idx < order.Count)
             _tabViewModel.SwitchTab(order[idx]);
+    }
+
+    private void OnGlobalSessionEvent(object? sender, SessionEvent evt)
+    {
+        if (evt is SessionBellEvent bellEvt && _tabViewModel is not null)
+        {
+            // Find the pane that owns this session
+            var activeWorkspace = _tabViewModel.ActiveWorkspace;
+            var activePaneId = activeWorkspace?.LayoutStore.ActivePaneId ?? "";
+
+            // Search all workspaces for the pane owning this session
+            foreach (var tabId in _tabViewModel.TabStore.TabOrder)
+            {
+                var workspace = _tabViewModel.GetWorkspace(tabId);
+                if (workspace is null) continue;
+
+                foreach (var paneId in workspace.LayoutStore.AllPaneIds)
+                {
+                    if (workspace.GetSessionIdForPane(paneId) == bellEvt.SessionId)
+                    {
+                        _attentionStore.RaiseBell(paneId, activePaneId, DateTimeOffset.UtcNow);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     private async void OnClosed(object sender, WindowEventArgs args)
