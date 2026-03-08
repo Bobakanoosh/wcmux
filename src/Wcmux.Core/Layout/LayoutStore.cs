@@ -125,7 +125,9 @@ public sealed class LayoutStore
             var newRoot = LayoutReducer.ClosePane(_root, paneId);
             if (newRoot is null)
             {
-                // Last pane closed -- caller should handle app exit
+                // Last pane closed -- null out root so AllPaneIds/Root reflect empty state
+                _root = null!;
+                _focusHistory.RemoveAll(id => id == paneId);
                 return sessionId;
             }
 

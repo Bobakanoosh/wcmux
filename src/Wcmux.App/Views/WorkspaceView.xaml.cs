@@ -21,6 +21,9 @@ public sealed partial class WorkspaceView : UserControl
     private readonly Dictionary<string, TextBlock> _paneTitles = new();
     private readonly Dictionary<string, string> _paneSessionIds = new();
 
+    /// <summary>Fired when a terminal requests a tab-level command (e.g., new-tab).</summary>
+    public event Func<string, Task>? TabCommandReceived;
+
     public WorkspaceView()
     {
         InitializeComponent();
@@ -341,6 +344,15 @@ public sealed partial class WorkspaceView : UserControl
                 break;
             case "resize-down":
                 _viewModel.ResizeActivePane(Direction.Down);
+                break;
+            default:
+                // Tab-level commands (new-tab, next-tab, prev-tab, tab-N)
+                if (command.StartsWith("new-tab") || command.StartsWith("next-tab")
+                    || command.StartsWith("prev-tab") || command.StartsWith("tab-"))
+                {
+                    if (TabCommandReceived is not null)
+                        await TabCommandReceived(command);
+                }
                 break;
         }
     }

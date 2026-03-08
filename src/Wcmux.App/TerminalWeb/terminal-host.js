@@ -41,6 +41,79 @@
   term.open(container);
   fitAddon.fit();
 
+  // --- Pane command interception ---
+  // Intercept key combos that should route to the native pane manager
+  // rather than being consumed by xterm.js.
+  term.attachCustomKeyEventHandler(function (e) {
+    if (e.type !== "keydown") return true;
+
+    var key = e.key;
+    var ctrl = e.ctrlKey;
+    var shift = e.shiftKey;
+    var alt = e.altKey;
+
+    // Ctrl+Shift combos: split, close, focus, new tab, prev tab
+    if (ctrl && shift && !alt) {
+      var cmd = null;
+      switch (key) {
+        case "H": cmd = "split-horizontal"; break;
+        case "V": cmd = "split-vertical"; break;
+        case "W": cmd = "close-pane"; break;
+        case "T": cmd = "new-tab"; break;
+        case "Tab": cmd = "prev-tab"; break;
+        case "ArrowLeft": cmd = "focus-left"; break;
+        case "ArrowRight": cmd = "focus-right"; break;
+        case "ArrowUp": cmd = "focus-up"; break;
+        case "ArrowDown": cmd = "focus-down"; break;
+      }
+      if (cmd) {
+        e.preventDefault();
+        window.chrome.webview.postMessage(JSON.stringify({ type: "command", command: cmd }));
+        return false;
+      }
+    }
+
+    // Ctrl-only combos: next tab, tab index switching
+    if (ctrl && !shift && !alt) {
+      var cmd = null;
+      switch (key) {
+        case "Tab": cmd = "next-tab"; break;
+        case "1": cmd = "tab-1"; break;
+        case "2": cmd = "tab-2"; break;
+        case "3": cmd = "tab-3"; break;
+        case "4": cmd = "tab-4"; break;
+        case "5": cmd = "tab-5"; break;
+        case "6": cmd = "tab-6"; break;
+        case "7": cmd = "tab-7"; break;
+        case "8": cmd = "tab-8"; break;
+        case "9": cmd = "tab-9"; break;
+      }
+      if (cmd) {
+        e.preventDefault();
+        window.chrome.webview.postMessage(JSON.stringify({ type: "command", command: cmd }));
+        return false;
+      }
+    }
+
+    // Ctrl+Alt combos: resize
+    if (ctrl && alt && !shift) {
+      var cmd = null;
+      switch (key) {
+        case "ArrowLeft": cmd = "resize-left"; break;
+        case "ArrowRight": cmd = "resize-right"; break;
+        case "ArrowUp": cmd = "resize-up"; break;
+        case "ArrowDown": cmd = "resize-down"; break;
+      }
+      if (cmd) {
+        e.preventDefault();
+        window.chrome.webview.postMessage(JSON.stringify({ type: "command", command: cmd }));
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   // --- Input routing ---
   // Send user keystrokes and paste data to the native host
   term.onData(function (data) {

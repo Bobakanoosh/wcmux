@@ -86,6 +86,27 @@ public sealed partial class MainWindow : Window
         if (workspace is null) return;
 
         var view = new WorkspaceView();
+        view.TabCommandReceived += async cmd =>
+        {
+            if (_tabViewModel is null) return;
+            switch (cmd)
+            {
+                case "new-tab":
+                    await CreateNewTabWithViewAsync();
+                    break;
+                case "next-tab":
+                    SwitchToRelativeTab(1);
+                    break;
+                case "prev-tab":
+                    SwitchToRelativeTab(-1);
+                    break;
+                default:
+                    // tab-1 through tab-9
+                    if (cmd.StartsWith("tab-") && int.TryParse(cmd[4..], out var index))
+                        SwitchToTabByIndex(index);
+                    break;
+            }
+        };
         _tabViews[tabId] = view;
         TabContentArea.Children.Add(view);
 
@@ -161,6 +182,34 @@ public sealed partial class MainWindow : Window
                 }
             }
         });
+    }
+
+    private void SwitchToRelativeTab(int offset)
+    {
+        if (_tabViewModel is null) return;
+        var order = _tabViewModel.TabStore.TabOrder;
+        if (order.Count <= 1) return;
+        var activeId = _tabViewModel.TabStore.ActiveTabId;
+        if (activeId is null) return;
+        var idx = ((IList<string>)order).IndexOf(activeId);
+        if (idx < 0) return;
+        var next = (idx + offset + order.Count) % order.Count;
+        _tabViewModel.SwitchTab(order[next]);
+    }
+
+    private void SwitchToTabByIndex(int oneBasedIndex)
+    {
+        if (_tabViewModel is null) return;
+        var order = _tabViewModel.TabStore.TabOrder;
+        if (order.Count == 0) return;
+        if (oneBasedIndex == 9)
+        {
+            _tabViewModel.SwitchTab(order[^1]);
+            return;
+        }
+        var idx = oneBasedIndex - 1;
+        if (idx < order.Count)
+            _tabViewModel.SwitchTab(order[idx]);
     }
 
     private async void OnClosed(object sender, WindowEventArgs args)

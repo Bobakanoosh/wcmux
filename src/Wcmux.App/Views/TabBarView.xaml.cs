@@ -114,7 +114,10 @@ public sealed partial class TabBarView : UserControl
             _ = _viewModel.CloseTabAsync(tabId);
         };
 
-        // Tab click to switch (only if not clicking close button)
+        // Prevent close button pointer events from bubbling to the grid
+        closeButton.PointerPressed += (s, e) => e.Handled = true;
+
+        // Tab click to switch
         grid.PointerPressed += (s, e) =>
         {
             _viewModel?.SwitchTab(tabId);
