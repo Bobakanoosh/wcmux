@@ -19,9 +19,9 @@
 
 ### Tabs
 
-- [ ] **TABS-01**: User can create a new tab with its own independent pane layout.
-- [ ] **TABS-02**: User can switch between tabs without disrupting inactive tab layouts.
-- [ ] **TABS-03**: User can close a tab without affecting sessions in other tabs.
+- [x] **TABS-01**: User can create a new tab with its own independent pane layout.
+- [x] **TABS-02**: User can switch between tabs without disrupting inactive tab layouts.
+- [x] **TABS-03**: User can close a tab without affecting sessions in other tabs.
 
 ### Notifications
 
@@ -66,9 +66,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAYT-01 | Phase 1 | Complete |
 | LAYT-02 | Phase 1 | Complete |
 | LAYT-03 | Phase 1 | Complete |
-| TABS-01 | Phase 2 | Pending |
-| TABS-02 | Phase 2 | Pending |
-| TABS-03 | Phase 2 | Pending |
+| TABS-01 | Phase 2 | Complete |
+| TABS-02 | Phase 2 | Complete |
+| TABS-03 | Phase 2 | Complete |
 | NOTF-01 | Phase 3 | Pending |
 | NOTF-02 | Phase 3 | Pending |
 | NOTF-03 | Phase 3 | Pending |
