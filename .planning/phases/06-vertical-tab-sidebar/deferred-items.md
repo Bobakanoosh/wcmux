@@ -24,3 +24,22 @@ The sidebar change did not introduce this bug -- it existed before with the hori
 3. **Detach/re-attach WebView2 sessions on tab switch**: More complex but cleanest fix.
 
 **Decision:** Deferred to a future phase focused on WebView2 lifecycle management.
+
+## Rename TextBox Light Theme Override
+
+**Reported during:** 06-02 checkpoint verification
+**Severity:** Low (cosmetic)
+
+**Issue:** When renaming a tab via right-click context menu, the TextBox renders with a light-themed background despite `RequestedTheme="Dark"` set both at the element level and at the Application level in App.xaml. WinUI's TextBox control template appears to override theme resources in this specific context (inline-created TextBox inside a dynamically-built StackPanel).
+
+**Attempted fixes:**
+1. Manual brush overrides (Background, Foreground, BorderBrush) — overridden by WinUI focus states
+2. `RequestedTheme = ElementTheme.Dark` on TextBox — no effect
+3. `RequestedTheme="Dark"` on Application element in App.xaml — no effect
+
+**Potential fixes (for future phase):**
+1. Custom TextBox ControlTemplate with hardcoded dark colors for all visual states
+2. Use a custom TextBox style defined in App.xaml resources with dark theme overrides
+3. Use a ContentDialog or Flyout for rename instead of inline TextBox
+
+**Decision:** Deferred — cosmetic issue, rename still functions correctly.
