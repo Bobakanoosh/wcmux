@@ -45,9 +45,9 @@
 
 ### Vertical Tab Sidebar
 
-- [ ] **SIDE-01**: User sees tabs in a vertical sidebar on the left showing tab title and cwd.
+- [x] **SIDE-01**: User sees tabs in a vertical sidebar on the left showing tab title and cwd.
 - [x] **SIDE-02**: User sees the last 2-3 lines of terminal output as preview text per tab.
-- [ ] **SIDE-03**: User sees attention indicators on sidebar tabs when background panes ring the bell.
+- [x] **SIDE-03**: User sees attention indicators on sidebar tabs when background panes ring the bell.
 
 ### Pane Interaction
 
@@ -103,9 +103,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PBAR-02 | Phase 5 | Complete |
 | PBAR-03 | Phase 5 | Complete |
 | PBAR-04 | Phase 5 | Complete |
-| SIDE-01 | Phase 6 | Pending |
+| SIDE-01 | Phase 6 | Complete |
 | SIDE-02 | Phase 6 | Complete |
-| SIDE-03 | Phase 6 | Pending |
+| SIDE-03 | Phase 6 | Complete |
 | PINT-01 | Phase 7 | Pending |
 | PINT-02 | Phase 7 | Pending |
 | PINT-03 | Phase 7 | Pending |
