@@ -83,11 +83,11 @@ Plans:
   1. User sees a dark custom title bar with window controls (minimize, maximize, close) that matches the app aesthetic instead of default white Windows chrome.
   2. User can drag the window by the custom title bar and double-click to maximize/restore without glitches.
   3. All existing terminal panes share a single WebView2 browser process group instead of spawning independent ones.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Custom dark title bar with InputNonClientPointerSource and system caption buttons
+- [ ] 04-02-PLAN.md -- Shared WebView2 environment singleton and controller refactor
 
 ### Phase 5: Pane Title Bars and Browser Panes
 **Goal**: Users can identify each pane by its foreground process, perform pane actions via mouse, and open browser panes alongside terminals.
@@ -143,7 +143,7 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 1. Terminal Runtime And Panes | v1.0 | 3/3 | Complete | 2026-03-07 |
 | 2. Tabbed Multiplexer Shell | v1.0 | 2/2 | Complete | 2026-03-07 |
 | 3. Attention And Windows Integration | v1.0 | 2/2 | Complete | 2026-03-08 |
-| 4. Custom Chrome and WebView2 Foundation | v1.1 | 0/? | Not started | - |
+| 4. Custom Chrome and WebView2 Foundation | v1.1 | 0/2 | Not started | - |
 | 5. Pane Title Bars and Browser Panes | v1.1 | 0/? | Not started | - |
 | 6. Vertical Tab Sidebar | v1.1 | 0/? | Not started | - |
 | 7. Pane Interaction | v1.1 | 0/? | Not started | - |
