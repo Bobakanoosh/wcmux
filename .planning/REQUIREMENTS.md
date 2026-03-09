@@ -33,7 +33,7 @@
 
 ### Window Chrome
 
-- [ ] **CHRM-01**: User sees a custom dark title bar replacing the default Windows chrome.
+- [x] **CHRM-01**: User sees a custom dark title bar replacing the default Windows chrome.
 - [x] **CHRM-02**: App uses a shared WebView2 environment across all panes to reduce memory overhead.
 
 ### Pane Title Bars
@@ -97,7 +97,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTF-01 | Phase 3 | Complete |
 | NOTF-02 | Phase 3 | Complete |
 | NOTF-03 | Phase 3 | Complete |
-| CHRM-01 | Phase 4 | Pending |
+| CHRM-01 | Phase 4 | Complete |
 | CHRM-02 | Phase 4 | Complete |
 | PBAR-01 | Phase 5 | Pending |
 | PBAR-02 | Phase 5 | Pending |
