@@ -45,8 +45,9 @@ public sealed class WebViewTerminalController : IAsyncDisposable
         _onReady = onReady;
         _onCommand = onCommand;
 
-        // Initialize WebView2 environment
-        await _webView.EnsureCoreWebView2Async();
+        // Initialize WebView2 with shared environment (all panes share one browser process group)
+        var environment = await WebViewEnvironmentCache.GetOrCreateAsync();
+        await _webView.EnsureCoreWebView2Async(environment);
         _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
         // Disable default context menu and dev tools in release
