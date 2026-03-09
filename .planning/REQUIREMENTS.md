@@ -97,25 +97,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTF-01 | Phase 3 | Complete |
 | NOTF-02 | Phase 3 | Complete |
 | NOTF-03 | Phase 3 | Complete |
-| CHRM-01 | — | Pending |
-| CHRM-02 | — | Pending |
-| PBAR-01 | — | Pending |
-| PBAR-02 | — | Pending |
-| PBAR-03 | — | Pending |
-| PBAR-04 | — | Pending |
-| SIDE-01 | — | Pending |
-| SIDE-02 | — | Pending |
-| SIDE-03 | — | Pending |
-| PINT-01 | — | Pending |
-| PINT-02 | — | Pending |
-| PINT-03 | — | Pending |
+| CHRM-01 | Phase 4 | Pending |
+| CHRM-02 | Phase 4 | Pending |
+| PBAR-01 | Phase 5 | Pending |
+| PBAR-02 | Phase 5 | Pending |
+| PBAR-03 | Phase 5 | Pending |
+| PBAR-04 | Phase 5 | Pending |
+| SIDE-01 | Phase 6 | Pending |
+| SIDE-02 | Phase 6 | Pending |
+| SIDE-03 | Phase 6 | Pending |
+| PINT-01 | Phase 7 | Pending |
+| PINT-02 | Phase 7 | Pending |
+| PINT-03 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 12 total (all complete)
 - v1.1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-08 after v1.1 milestone requirements*
+*Last updated: 2026-03-08 after v1.1 roadmap creation*
