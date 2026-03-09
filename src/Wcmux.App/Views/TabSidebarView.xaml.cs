@@ -149,17 +149,26 @@ public sealed partial class TabSidebarView : UserControl
             }
 
             var entry = CreateSidebarTabEntry(tabId, tab.Label, cwd, isActive, hasAttention);
-            TabList.Children.Add(entry);
+            TabList.Children.Add(entry.container);
         }
     }
 
-    private Grid CreateSidebarTabEntry(string tabId, string label, string cwd, bool isActive, bool hasAttention)
+    private (UIElement container, Grid grid) CreateSidebarTabEntry(string tabId, string label, string cwd, bool isActive, bool hasAttention)
     {
         var grid = new Grid
         {
             Background = isActive ? _activeBg : _transparentBg,
             Padding = new Thickness(12, 8, 8, 8),
             Tag = tabId,
+        };
+
+        // Wrap in a border for attention blinking
+        var entryBorder = new Border
+        {
+            Child = grid,
+            BorderThickness = new Thickness(1),
+            BorderBrush = hasAttention ? _attentionForeground : _transparentBg,
+            CornerRadius = new CornerRadius(2),
         };
 
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -199,7 +208,7 @@ public sealed partial class TabSidebarView : UserControl
         // Start blink animation for attention tabs
         if (hasAttention)
         {
-            StartTabBlinkAnimation(tabId, titleBlock, dotBlock);
+            StartTabBlinkAnimation(tabId, titleBlock, dotBlock, entryBorder);
         }
 
         textStack.Children.Add(titlePanel);
@@ -269,10 +278,10 @@ public sealed partial class TabSidebarView : UserControl
         menuFlyout.Items.Add(renameItem);
         grid.ContextFlyout = menuFlyout;
 
-        return grid;
+        return (entryBorder, grid);
     }
 
-    private void StartTabBlinkAnimation(string tabId, TextBlock titleBlock, TextBlock? dotBlock)
+    private void StartTabBlinkAnimation(string tabId, TextBlock titleBlock, TextBlock? dotBlock, Border entryBorder)
     {
         int toggleCount = 0;
 
@@ -284,14 +293,17 @@ public sealed partial class TabSidebarView : UserControl
             {
                 titleBlock.Foreground = _attentionForeground;
                 if (dotBlock is not null) dotBlock.Foreground = _attentionForeground;
+                entryBorder.BorderBrush = _attentionForeground;
                 timer.Stop();
                 _tabBlinkTimers.Remove(tabId);
                 return;
             }
 
-            var brush = (toggleCount % 2 == 0) ? _attentionForeground : _defaultForeground;
-            titleBlock.Foreground = brush;
-            if (dotBlock is not null) dotBlock.Foreground = brush;
+            var isOn = (toggleCount % 2 == 0);
+            var textBrush = isOn ? _attentionForeground : _defaultForeground;
+            titleBlock.Foreground = textBrush;
+            if (dotBlock is not null) dotBlock.Foreground = textBrush;
+            entryBorder.BorderBrush = isOn ? _attentionForeground : _transparentBg;
         };
 
         _tabBlinkTimers[tabId] = timer;
