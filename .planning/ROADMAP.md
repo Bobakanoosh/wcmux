@@ -145,5 +145,5 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 3. Attention And Windows Integration | v1.0 | 2/2 | Complete | 2026-03-08 |
 | 4. Custom Chrome and WebView2 Foundation | v1.1 | 2/2 | Complete | 2026-03-09 |
 | 5. Pane Title Bars and Browser Panes | v1.1 | 2/2 | Complete | 2026-03-09 |
-| 6. Vertical Tab Sidebar | v1.1 | 0/2 | Not started | - |
+| 6. Vertical Tab Sidebar | 1/2 | In Progress|  | - |
 | 7. Pane Interaction | v1.1 | 0/? | Not started | - |
