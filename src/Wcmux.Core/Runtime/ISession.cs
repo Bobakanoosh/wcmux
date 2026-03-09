@@ -15,6 +15,9 @@ public interface ISession : IAsyncDisposable
     /// <summary>Whether the session process is still running.</summary>
     bool IsRunning { get; }
 
+    /// <summary>The OS process ID of the shell process.</summary>
+    int ProcessId { get; }
+
     /// <summary>The last known working directory reported by the shell.</summary>
     string? LastKnownCwd { get; }
 

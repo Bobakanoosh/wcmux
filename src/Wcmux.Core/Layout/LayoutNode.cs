@@ -25,6 +25,18 @@ public enum Direction
 }
 
 /// <summary>
+/// Discriminates between terminal and browser pane types.
+/// </summary>
+public enum PaneKind
+{
+    /// <summary>A terminal session pane (default).</summary>
+    Terminal,
+
+    /// <summary>A WebView2 browser pane.</summary>
+    Browser,
+}
+
+/// <summary>
 /// Immutable binary split-tree node. A node is either a leaf (terminal pane)
 /// or a split containing two children. Layout state is reducer-owned --
 /// UI widgets render the tree but never define it.
@@ -45,6 +57,9 @@ public sealed record LeafNode : LayoutNode
 
     /// <summary>Session ID currently attached to this pane.</summary>
     public required string SessionId { get; init; }
+
+    /// <summary>Pane type discriminator. Defaults to Terminal for backward compatibility.</summary>
+    public PaneKind Kind { get; init; } = PaneKind.Terminal;
 }
 
 /// <summary>

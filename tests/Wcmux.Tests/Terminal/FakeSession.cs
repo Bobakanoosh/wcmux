@@ -18,6 +18,7 @@ internal sealed class FakeSession : ISession
         "fake.exe", [], "C:\\fake", new Dictionary<string, string?>(), "pwsh");
 
     public bool IsRunning { get; set; } = true;
+    public int ProcessId { get; set; } = Environment.ProcessId;
     public string? LastKnownCwd { get; set; } = "C:\\fake";
 
     /// <summary>All input data written to this session.</summary>

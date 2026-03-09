@@ -36,6 +36,7 @@ internal sealed partial class ConPtySession : ISession
         }
     }
     public string? LastKnownCwd => _lastKnownCwd;
+    public int ProcessId => _process.Id;
 
     private ConPtySession(
         string sessionId,
