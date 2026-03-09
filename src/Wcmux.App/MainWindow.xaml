@@ -18,6 +18,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -37,6 +38,18 @@
                        VerticalAlignment="Center"
                        Margin="8,0,0,0"
                        IsHitTestVisible="False" />
+
+            <Button x:Name="AddTabButton" Grid.Column="2"
+                    Height="28" Width="28"
+                    MinWidth="0" MinHeight="0"
+                    Background="Transparent" Foreground="#999999"
+                    Content="+" FontSize="14"
+                    Padding="0"
+                    VerticalAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Margin="8,0,0,0"
+                    Click="OnAddTabClick" />
         </Grid>
 
         <!-- Main content (Row 1): sidebar + divider + workspace -->

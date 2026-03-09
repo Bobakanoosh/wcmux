@@ -24,9 +24,7 @@ public sealed partial class TabSidebarView : UserControl
     private readonly SolidColorBrush _closeButtonFg = new(Windows.UI.Color.FromArgb(255, 136, 136, 136));
     private readonly Dictionary<string, DispatcherTimer> _tabBlinkTimers = new();
     private DispatcherTimer? _refreshTimer;
-
-    /// <summary>Fired when the user clicks the [+] button to request a new tab.</summary>
-    public event Func<Task>? NewTabRequested;
+    private bool _isRenaming;
 
     public TabSidebarView()
     {
@@ -96,17 +94,9 @@ public sealed partial class TabSidebarView : UserControl
 
     private void OnRefreshTimerTick(object? sender, object e) => RenderTabs();
 
-    private void OnAddTabClick(object sender, RoutedEventArgs e)
-    {
-        if (NewTabRequested is not null)
-        {
-            _ = NewTabRequested();
-        }
-    }
-
     private void RenderTabs()
     {
-        if (_viewModel is null) return;
+        if (_viewModel is null || _isRenaming) return;
 
         // Stop all existing blink timers before re-rendering
         foreach (var timer in _tabBlinkTimers.Values)
@@ -314,6 +304,8 @@ public sealed partial class TabSidebarView : UserControl
     {
         if (_viewModel is null) return;
 
+        _isRenaming = true;
+
         // Replace text content with a TextBox
         textStack.Children.Clear();
 
@@ -326,32 +318,28 @@ public sealed partial class TabSidebarView : UserControl
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0),
             SelectionStart = 0,
-            // Dark theme styling
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 30, 30)),
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204)),
-            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 80, 80, 80)),
-            BorderThickness = new Thickness(1),
             RequestedTheme = ElementTheme.Dark,
         };
-        textBox.SelectAll();
 
         textStack.Children.Add(textBox);
 
-        void CommitRename()
-        {
-            var newLabel = textBox.Text?.Trim();
-            if (!string.IsNullOrEmpty(newLabel) && newLabel != currentLabel)
-            {
-                _viewModel?.RenameTab(tabId, newLabel);
-            }
-            else
-            {
-                RenderTabs();
-            }
-        }
+        var committed = false;
 
-        void CancelRename()
+        void FinishRename(bool commit)
         {
+            if (committed) return;
+            committed = true;
+            _isRenaming = false;
+
+            if (commit)
+            {
+                var newLabel = textBox.Text?.Trim();
+                if (!string.IsNullOrEmpty(newLabel) && newLabel != currentLabel)
+                {
+                    _viewModel?.RenameTab(tabId, newLabel);
+                }
+            }
+
             RenderTabs();
         }
 
@@ -360,19 +348,23 @@ public sealed partial class TabSidebarView : UserControl
             if (e.Key == Windows.System.VirtualKey.Enter)
             {
                 e.Handled = true;
-                CommitRename();
+                FinishRename(commit: true);
             }
             else if (e.Key == Windows.System.VirtualKey.Escape)
             {
                 e.Handled = true;
-                CancelRename();
+                FinishRename(commit: false);
             }
         };
 
         // Cancel rename on focus loss (do not auto-commit)
-        textBox.LostFocus += (s, e) => CancelRename();
+        textBox.LostFocus += (s, e) => FinishRename(commit: false);
 
-        // Focus the textbox after it's in the visual tree
-        DispatcherQueue?.TryEnqueue(() => textBox.Focus(FocusState.Programmatic));
+        // Focus and select all after it's in the visual tree
+        DispatcherQueue?.TryEnqueue(() =>
+        {
+            textBox.Focus(FocusState.Programmatic);
+            textBox.SelectAll();
+        });
     }
 }

@@ -57,9 +57,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Configures InputNonClientPointerSource passthrough regions for the custom title bar.
-    /// Currently no interactive elements exist in the title bar, so no passthrough regions
-    /// are needed. This scaffold is ready for future phases to register passthrough regions
-    /// for buttons or controls added to the title bar.
+    /// Registers the [+] new tab button as a passthrough region so it receives pointer input.
     /// </summary>
     private void SetRegionsForCustomTitleBar()
     {
@@ -68,7 +66,22 @@ public sealed partial class MainWindow : Window
         var scaleAdjustment = AppTitleBar.XamlRoot.RasterizationScale;
 
         var nonClientSource = InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
-        nonClientSource.SetRegionRects(NonClientRegionKind.Passthrough, Array.Empty<RectInt32>());
+
+        var transform = AddTabButton.TransformToVisual(null);
+        var bounds = transform.TransformBounds(new Windows.Foundation.Rect(0, 0, AddTabButton.ActualWidth, AddTabButton.ActualHeight));
+
+        var region = new RectInt32(
+            (int)Math.Round(bounds.X * scaleAdjustment),
+            (int)Math.Round(bounds.Y * scaleAdjustment),
+            (int)Math.Round(bounds.Width * scaleAdjustment),
+            (int)Math.Round(bounds.Height * scaleAdjustment));
+
+        nonClientSource.SetRegionRects(NonClientRegionKind.Passthrough, new[] { region });
+    }
+
+    private async void OnAddTabClick(object sender, RoutedEventArgs e)
+    {
+        await CreateNewTabWithViewAsync();
     }
 
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
@@ -170,7 +183,6 @@ public sealed partial class MainWindow : Window
 
             // Attach tab sidebar with attention store and tab views
             TabSidebar.Attach(_tabViewModel, _attentionStore, _tabViews);
-            TabSidebar.NewTabRequested += () => CreateNewTabWithViewAsync();
 
             // Attach tab command bindings (persistent, not re-attached on tab switch)
             if (Content is UIElement rootElement)

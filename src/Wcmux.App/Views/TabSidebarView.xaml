@@ -7,21 +7,7 @@
     mc:Ignorable="d">
 
     <Grid Background="#191919">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <Button x:Name="AddTabButton" Grid.Row="0"
-                Height="32"
-                HorizontalAlignment="Stretch"
-                Background="Transparent" Foreground="#999999"
-                Content="+" FontSize="16"
-                HorizontalContentAlignment="Center"
-                Click="OnAddTabClick" />
-
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel x:Name="TabList" Orientation="Vertical" />
         </ScrollViewer>
