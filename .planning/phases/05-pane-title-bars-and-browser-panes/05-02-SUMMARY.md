@@ -19,7 +19,7 @@ affects: [phase-06-sidebar]
 
 tech-stack:
   added: []
-  patterns: [pane-kind-dispatch-in-view, sentinel-session-id-for-browser-panes, preview-key-down-shortcut-interception]
+  patterns: [pane-kind-dispatch-in-view, sentinel-session-id-for-browser-panes, js-key-interception-via-web-message]
 
 key-files:
   created:
@@ -32,9 +32,11 @@ key-files:
     - src/Wcmux.Core/Layout/LayoutReducer.cs
 
 key-decisions:
-  - "Used PreviewKeyDown instead of AcceleratorKeyPressed for shortcut interception (WinUI3 WebView2 does not expose AcceleratorKeyPressed)"
+  - "Used JS injection via AddScriptToExecuteOnDocumentCreatedAsync + WebMessageReceived for shortcut interception inside WebView2 content"
   - "Browser panes use sentinel session ID prefixed with 'browser:' to avoid ConPTY session creation"
-  - "Browser title bar shows static 'browser' label with only close button (no split buttons)"
+  - "Browser title bar has full button set (split-h, split-v, browser, close) matching terminal title bars"
+  - "Browser pane defaults to google.com instead of about:blank"
+  - "Used GotFocus instead of PointerPressed for browser pane focus detection (WebView2 swallows pointer events)"
 
 patterns-established:
   - "Browser pane pattern: sentinel sessionId, no _paneSessions entry, PaneKind.Browser in LeafNode"
@@ -55,7 +57,7 @@ completed: 2026-03-09
 - **Duration:** 5 min
 - **Started:** 2026-03-09T03:11:13Z
 - **Completed:** 2026-03-09T03:16:00Z
-- **Tasks:** 1 (of 2 total; Task 2 is human-verify checkpoint)
+- **Tasks:** 2/2 (Task 2 was human-verify checkpoint — approved)
 - **Files modified:** 6
 
 ## Accomplishments
@@ -63,7 +65,7 @@ completed: 2026-03-09
 - Browser panes use shared WebViewEnvironmentCache -- no separate browser process groups
 - Globe button in pane title bar opens browser pane via vertical split
 - PaneKind-aware pane creation and rendering in WorkspaceView
-- App-level keyboard shortcuts intercepted via PreviewKeyDown before WebView2 consumes them
+- App-level keyboard shortcuts intercepted via JS injection + WebMessageReceived and PreviewKeyDown fallback
 - Browser panes cleanly close via title bar X button with no session teardown needed
 
 ## Task Commits
@@ -71,6 +73,7 @@ completed: 2026-03-09
 Each task was committed atomically:
 
 1. **Task 1: BrowserPaneView, browser split flow, and PaneKind-aware rendering** - `f117751` (feat)
+2. **Task 2: Human verification checkpoint** - `acaf202` (fix — addressed 5 feedback items)
 
 ## Files Created/Modified
 - `src/Wcmux.App/Views/BrowserPaneView.xaml` - XAML layout with address bar grid and WebView2
@@ -89,18 +92,38 @@ Each task was committed atomically:
 
 ### Auto-fixed Issues
 
-**1. [Rule 1 - Bug] Replaced AcceleratorKeyPressed with PreviewKeyDown**
+**1. [Rule 1 - Bug] Replaced AcceleratorKeyPressed with JS injection + WebMessageReceived**
 - **Found during:** Task 1 (build verification)
-- **Issue:** WinUI3 WebView2 control does not expose AcceleratorKeyPressed event
-- **Fix:** Used PreviewKeyDown on the UserControl which fires in tunneling phase before WebView2 processes keys
+- **Issue:** WinUI3 WebView2 control does not expose CoreWebView2Controller.AcceleratorKeyPressed
+- **Fix:** Used AddScriptToExecuteOnDocumentCreatedAsync to inject JS key interceptor that posts messages via window.chrome.webview.postMessage, plus PreviewKeyDown as fallback
 - **Files modified:** src/Wcmux.App/Views/BrowserPaneView.xaml.cs
-- **Verification:** Build succeeds, shortcut pattern matches existing terminal pane approach
-- **Committed in:** f117751
+- **Committed in:** f117751, acaf202
+
+### Checkpoint Feedback Fixes
+
+**2. [Checkpoint] Browser title bar missing split buttons**
+- **Fix:** Added split-h, split-v, and browser buttons to CreateBrowserPaneTitleBar
+- **Committed in:** acaf202
+
+**3. [Checkpoint] Address bar background turns white on focus**
+- **Fix:** Overrode TextControlBackgroundFocused/PointerOver WinUI3 resources
+- **Committed in:** acaf202
+
+**4. [Checkpoint] Browser pane opacity doesn't change on click**
+- **Fix:** Replaced PointerPressed with GotFocus (WebView2 swallows pointer events)
+- **Committed in:** acaf202
+
+**5. [Checkpoint] Default to google.com instead of about:blank**
+- **Committed in:** acaf202
+
+**6. [Checkpoint] Ctrl+Shift+Arrow not working in browser pane**
+- **Fix:** Injected JavaScript key interceptor via AddScriptToExecuteOnDocumentCreatedAsync
+- **Committed in:** acaf202
 
 ---
 
-**Total deviations:** 1 auto-fixed (1 bug)
-**Impact on plan:** API surface difference in WinUI3 WebView2. PreviewKeyDown achieves same result. No scope creep.
+**Total deviations:** 1 auto-fixed, 5 checkpoint feedback fixes
+**Impact on plan:** Better UX than planned. JS injection approach more robust than PreviewKeyDown alone.
 
 ## Issues Encountered
 - 2 pre-existing WebViewEnvironmentCacheTests failures unrelated to this plan (already in phase 04 deferred items)
