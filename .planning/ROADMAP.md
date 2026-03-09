@@ -86,8 +86,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Custom dark title bar with InputNonClientPointerSource and system caption buttons
-- [ ] 04-02-PLAN.md -- Shared WebView2 environment singleton and controller refactor
+- [x] 04-01-PLAN.md -- Custom dark title bar with InputNonClientPointerSource and system caption buttons
+- [x] 04-02-PLAN.md -- Shared WebView2 environment singleton and controller refactor
 
 ### Phase 5: Pane Title Bars and Browser Panes
 **Goal**: Users can identify each pane by its foreground process, perform pane actions via mouse, and open browser panes alongside terminals.
@@ -98,11 +98,11 @@ Plans:
   2. User can close a pane by clicking the X button in its title bar.
   3. User can split a pane horizontally or vertically by clicking icon buttons in its title bar.
   4. User can open a browser pane via a button in the pane title bar, and the browser pane renders web content with address bar and navigation controls.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- ForegroundProcessDetector, PaneKind model, pane title bar UI with close/split buttons
+- [ ] 05-02-PLAN.md -- BrowserPaneView with WebView2, address bar, and PaneKind-aware rendering
 
 ### Phase 6: Vertical Tab Sidebar
 **Goal**: Users manage tabs through a vertical sidebar that shows richer context than the old horizontal tab bar.
@@ -143,7 +143,7 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 1. Terminal Runtime And Panes | v1.0 | 3/3 | Complete | 2026-03-07 |
 | 2. Tabbed Multiplexer Shell | v1.0 | 2/2 | Complete | 2026-03-07 |
 | 3. Attention And Windows Integration | v1.0 | 2/2 | Complete | 2026-03-08 |
-| 4. Custom Chrome and WebView2 Foundation | 2/2 | Complete   | 2026-03-09 | - |
-| 5. Pane Title Bars and Browser Panes | v1.1 | 0/? | Not started | - |
+| 4. Custom Chrome and WebView2 Foundation | v1.1 | 2/2 | Complete | 2026-03-09 |
+| 5. Pane Title Bars and Browser Panes | v1.1 | 0/2 | Not started | - |
 | 6. Vertical Tab Sidebar | v1.1 | 0/? | Not started | - |
 | 7. Pane Interaction | v1.1 | 0/? | Not started | - |
