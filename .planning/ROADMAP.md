@@ -143,7 +143,7 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 1. Terminal Runtime And Panes | v1.0 | 3/3 | Complete | 2026-03-07 |
 | 2. Tabbed Multiplexer Shell | v1.0 | 2/2 | Complete | 2026-03-07 |
 | 3. Attention And Windows Integration | v1.0 | 2/2 | Complete | 2026-03-08 |
-| 4. Custom Chrome and WebView2 Foundation | v1.1 | 0/2 | Not started | - |
+| 4. Custom Chrome and WebView2 Foundation | 1/2 | In Progress|  | - |
 | 5. Pane Title Bars and Browser Panes | v1.1 | 0/? | Not started | - |
 | 6. Vertical Tab Sidebar | v1.1 | 0/? | Not started | - |
 | 7. Pane Interaction | v1.1 | 0/? | Not started | - |
