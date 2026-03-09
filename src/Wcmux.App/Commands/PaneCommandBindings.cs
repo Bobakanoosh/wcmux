@@ -82,6 +82,23 @@ public static class PaneCommandBindings
         AddAccelerator(target, VirtualKey.Down,
             VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu,
             () => { viewModel.ResizeActivePane(Direction.Down); return Task.CompletedTask; });
+
+        // Swap pane commands (Ctrl+Alt+Shift)
+        AddAccelerator(target, VirtualKey.Left,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Left); return Task.CompletedTask; });
+
+        AddAccelerator(target, VirtualKey.Right,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Right); return Task.CompletedTask; });
+
+        AddAccelerator(target, VirtualKey.Up,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Up); return Task.CompletedTask; });
+
+        AddAccelerator(target, VirtualKey.Down,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Down); return Task.CompletedTask; });
     }
 
     /// <summary>

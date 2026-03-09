@@ -1,9 +1,12 @@
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Wcmux.App.ViewModels;
 using Wcmux.Core.Layout;
 using Wcmux.Core.Runtime;
+using Windows.Foundation;
 
 namespace Wcmux.App.Views;
 
@@ -25,6 +28,20 @@ public sealed partial class WorkspaceView : UserControl
     private readonly Dictionary<string, string> _paneSessionIds = new();
     private readonly Dictionary<string, DispatcherTimer> _blinkTimers = new();
     private DispatcherTimer? _processNameTimer;
+
+    // Resize handle state
+    private readonly List<UIElement> _resizeHandles = new();
+    private bool _isResizing;
+    private string? _resizeSplitNodeId;
+    private SplitAxis _resizeAxis;
+    private double _resizeContainingX, _resizeContainingY, _resizeContainingW, _resizeContainingH;
+
+    // Drag-to-rearrange state
+    private Border? _dragPreview;
+    private bool _isDraggingPane;
+    private string? _dragSourcePaneId;
+    private Point _dragStartPoint;
+    private const double DragThreshold = 5.0;
 
     /// <summary>Fired when a terminal requests a tab-level command (e.g., new-tab).</summary>
     public event Func<string, Task>? TabCommandReceived;
@@ -201,6 +218,16 @@ public sealed partial class WorkspaceView : UserControl
                     PositionBrowserPaneView(paneId, browserView, rect, paneId == activePaneId);
                 }
             }
+        }
+
+        // Resize handles render on top of pane containers (higher z-index)
+        CreateResizeHandles();
+
+        // Ensure drag preview overlay stays on top of everything
+        if (_dragPreview is not null)
+        {
+            RootContainer.Children.Remove(_dragPreview);
+            RootContainer.Children.Add(_dragPreview);
         }
     }
 
@@ -786,6 +813,163 @@ public sealed partial class WorkspaceView : UserControl
             timer.Stop();
         }
     }
+
+    #region Resize Handles
+
+    /// <summary>
+    /// Collects split boundary positions by walking the layout tree recursively.
+    /// Each boundary records: the SplitNode, boundary pixel position, cross-axis start, cross-axis size,
+    /// and the containing rect for ratio calculation.
+    /// </summary>
+    private static void CollectSplitBoundaries(
+        LayoutNode node, double x, double y, double w, double h,
+        List<(SplitNode split, double boundaryPos, double crossStart, double crossSize,
+              double containX, double containY, double containW, double containH)> result)
+    {
+        if (node is not SplitNode split) return;
+
+        if (split.Axis == SplitAxis.Vertical)
+        {
+            var boundary = x + w * split.Ratio;
+            result.Add((split, boundary, y, h, x, y, w, h));
+
+            // Recurse into children
+            var firstW = w * split.Ratio;
+            var secondW = w * (1.0 - split.Ratio);
+            CollectSplitBoundaries(split.First, x, y, firstW, h, result);
+            CollectSplitBoundaries(split.Second, x + firstW, y, secondW, h, result);
+        }
+        else // Horizontal
+        {
+            var boundary = y + h * split.Ratio;
+            result.Add((split, boundary, x, w, x, y, w, h));
+
+            // Recurse into children
+            var firstH = h * split.Ratio;
+            var secondH = h * (1.0 - split.Ratio);
+            CollectSplitBoundaries(split.First, x, y, w, firstH, result);
+            CollectSplitBoundaries(split.Second, x, y + firstH, w, secondH, result);
+        }
+    }
+
+    /// <summary>
+    /// Creates transparent resize handles at all split boundaries.
+    /// Each handle shows the appropriate resize cursor and supports drag-to-resize.
+    /// </summary>
+    private void CreateResizeHandles()
+    {
+        // Remove existing handles
+        foreach (var handle in _resizeHandles)
+        {
+            RootContainer.Children.Remove(handle);
+        }
+        _resizeHandles.Clear();
+
+        if (_viewModel is null) return;
+
+        var root = _viewModel.LayoutStore.Root;
+        if (root is not SplitNode) return;
+
+        var containerW = RootContainer.ActualWidth;
+        var containerH = RootContainer.ActualHeight;
+        if (containerW <= 0 || containerH <= 0) return;
+
+        var boundaries = new List<(SplitNode split, double boundaryPos, double crossStart, double crossSize,
+                                   double containX, double containY, double containW, double containH)>();
+        CollectSplitBoundaries(root, 0, 0, containerW, containerH, boundaries);
+
+        const double handleThickness = 6.0;
+
+        foreach (var (split, boundaryPos, crossStart, crossSize, cx, cy, cw, ch) in boundaries)
+        {
+            var handle = new CursorBorder
+            {
+                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(1, 0, 0, 0)), // near-transparent for hit testing
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+
+            if (split.Axis == SplitAxis.Vertical)
+            {
+                // Vertical split: EW resize cursor, narrow vertical strip
+                handle.Cursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+                handle.Width = handleThickness;
+                handle.Height = crossSize;
+                handle.Margin = new Thickness(boundaryPos - handleThickness / 2, crossStart, 0, 0);
+            }
+            else
+            {
+                // Horizontal split: NS resize cursor, narrow horizontal strip
+                handle.Cursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
+                handle.Width = crossSize;
+                handle.Height = handleThickness;
+                handle.Margin = new Thickness(crossStart, boundaryPos - handleThickness / 2, 0, 0);
+            }
+
+            // Capture split node info for drag handlers via closure
+            var nodeId = split.NodeId;
+            var axis = split.Axis;
+            var containX = cx;
+            var containY = cy;
+            var containW = cw;
+            var containH = ch;
+
+            handle.PointerPressed += (s, e) =>
+            {
+                if (e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed)
+                {
+                    _isResizing = true;
+                    _resizeSplitNodeId = nodeId;
+                    _resizeAxis = axis;
+                    _resizeContainingX = containX;
+                    _resizeContainingY = containY;
+                    _resizeContainingW = containW;
+                    _resizeContainingH = containH;
+                    handle.CapturePointer(e.Pointer);
+                    e.Handled = true;
+                }
+            };
+
+            handle.PointerMoved += (s, e) =>
+            {
+                if (!_isResizing || _resizeSplitNodeId is null) return;
+
+                var pos = e.GetCurrentPoint(RootContainer).Position;
+                double newRatio;
+                if (_resizeAxis == SplitAxis.Vertical)
+                {
+                    newRatio = (pos.X - _resizeContainingX) / _resizeContainingW;
+                }
+                else
+                {
+                    newRatio = (pos.Y - _resizeContainingY) / _resizeContainingH;
+                }
+
+                newRatio = Math.Clamp(newRatio, 0.1, 0.9);
+                _viewModel?.SetSplitRatio(_resizeSplitNodeId, newRatio);
+                e.Handled = true;
+            };
+
+            handle.PointerReleased += (s, e) =>
+            {
+                _isResizing = false;
+                _resizeSplitNodeId = null;
+                handle.ReleasePointerCapture(e.Pointer);
+                e.Handled = true;
+            };
+
+            handle.PointerCaptureLost += (s, e) =>
+            {
+                _isResizing = false;
+                _resizeSplitNodeId = null;
+            };
+
+            RootContainer.Children.Add(handle);
+            _resizeHandles.Add(handle);
+        }
+    }
+
+    #endregion
 
     /// <summary>
     /// Finds the outer Grid container for a pane view.
