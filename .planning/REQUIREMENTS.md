@@ -3,7 +3,7 @@
 **Defined:** 2026-03-06
 **Core Value:** Users can manage multiple real Windows terminal sessions in one place without losing terminal fidelity or being pushed into an opinionated workflow.
 
-## v1 Requirements
+## v1.0 Requirements (Complete)
 
 ### Sessions
 
@@ -29,6 +29,32 @@
 - [x] **NOTF-02**: User receives a Windows desktop notification when a non-focused session needs attention.
 - [x] **NOTF-03**: User can receive attention notifications from generic terminal sessions rather than from a single hard-coded AI tool.
 
+## v1.1 Requirements
+
+### Window Chrome
+
+- [ ] **CHRM-01**: User sees a custom dark title bar replacing the default Windows chrome.
+- [ ] **CHRM-02**: App uses a shared WebView2 environment across all panes to reduce memory overhead.
+
+### Pane Title Bars
+
+- [ ] **PBAR-01**: User sees a tab-like title bar above each pane showing the foreground process name.
+- [ ] **PBAR-02**: User can close a pane via an X button in its title bar.
+- [ ] **PBAR-03**: User can split a pane horizontally or vertically via icon buttons in the pane title bar.
+- [ ] **PBAR-04**: User can open a browser pane via a button in the pane title bar.
+
+### Vertical Tab Sidebar
+
+- [ ] **SIDE-01**: User sees tabs in a vertical sidebar on the left showing tab title and cwd.
+- [ ] **SIDE-02**: User sees the last 2-3 lines of terminal output as preview text per tab.
+- [ ] **SIDE-03**: User sees attention indicators on sidebar tabs when background panes ring the bell.
+
+### Pane Interaction
+
+- [ ] **PINT-01**: User can drag pane borders with the mouse to resize panes.
+- [ ] **PINT-02**: User can swap pane positions using Ctrl+Alt+Shift+Arrow keys.
+- [ ] **PINT-03**: User can drag a pane title bar onto another pane to rearrange splits, with a blue preview showing the target split direction.
+
 ## v2 Requirements
 
 ### Workspaces
@@ -41,18 +67,17 @@
 - **AUTO-01**: User can control sessions and layouts through a local CLI or automation API.
 - **AUTO-02**: User can trigger app actions from external scripts without tying the product to one AI vendor.
 
-### Surfaces
-
-- **SURF-01**: User can open browser or other non-terminal surfaces inside the workspace when parity work becomes worthwhile.
-
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
 | Electron shell | Explicitly rejected by project constraints |
-| Embedded browser parity in v1 | Expands scope before terminal fidelity is proven |
-| Public automation API in v1 | Depends on a stable internal command model |
-| Cloud sync or collaboration | Adds auth, sync, and privacy complexity unrelated to v1 validation |
+| Public automation API in v1.1 | Depends on a stable internal command model |
+| Cloud sync or collaboration | Adds auth, sync, and privacy complexity unrelated to core |
+| Tab drag-and-drop reordering | High effort for WinUI 3 custom UI; defer to keyboard reorder |
+| Terminal scrollback search | xterm.js search addon wiring is non-trivial; defer |
+| Git/PR status in sidebar | Requires git CLI + GitHub API integration; scope expansion |
+| Live terminal thumbnail previews | Massive complexity vs text-based preview for marginal value |
 
 ## Traceability
 
@@ -72,12 +97,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTF-01 | Phase 3 | Complete |
 | NOTF-02 | Phase 3 | Complete |
 | NOTF-03 | Phase 3 | Complete |
+| CHRM-01 | — | Pending |
+| CHRM-02 | — | Pending |
+| PBAR-01 | — | Pending |
+| PBAR-02 | — | Pending |
+| PBAR-03 | — | Pending |
+| PBAR-04 | — | Pending |
+| SIDE-01 | — | Pending |
+| SIDE-02 | — | Pending |
+| SIDE-03 | — | Pending |
+| PINT-01 | — | Pending |
+| PINT-02 | — | Pending |
+| PINT-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 12 total
-- Mapped to phases: 12
-- Unmapped: 0
+- v1.0 requirements: 12 total (all complete)
+- v1.1 requirements: 12 total
+- Mapped to phases: 0
+- Unmapped: 12
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after roadmap creation*
+*Last updated: 2026-03-08 after v1.1 milestone requirements*
