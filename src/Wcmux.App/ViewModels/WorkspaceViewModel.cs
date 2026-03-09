@@ -151,6 +151,30 @@ public sealed class WorkspaceViewModel : IAsyncDisposable
     public void FocusDown() => FocusDirection(Direction.Down);
 
     /// <summary>
+    /// Swaps the active pane's content with the neighbor in the given direction.
+    /// </summary>
+    public void SwapActivePane(Direction direction)
+    {
+        _layoutStore.SwapActivePane(direction);
+    }
+
+    /// <summary>
+    /// Sets the split ratio of a specific split node by NodeId.
+    /// </summary>
+    public void SetSplitRatio(string nodeId, double newRatio)
+    {
+        _layoutStore.SetSplitRatio(nodeId, newRatio);
+    }
+
+    /// <summary>
+    /// Moves source pane adjacent to target pane in the given direction.
+    /// </summary>
+    public void MovePane(string sourcePaneId, string targetPaneId, Direction dropSide)
+    {
+        _layoutStore.MovePane(sourcePaneId, targetPaneId, dropSide);
+    }
+
+    /// <summary>
     /// Resizes the active pane in the given direction.
     /// </summary>
     public void ResizeActivePane(Direction direction)

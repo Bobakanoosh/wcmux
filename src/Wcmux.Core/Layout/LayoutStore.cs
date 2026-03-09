@@ -198,6 +198,54 @@ public sealed class LayoutStore
     }
 
     /// <summary>
+    /// Sets the split ratio of a specific split node by NodeId.
+    /// </summary>
+    public void SetSplitRatio(string nodeId, double newRatio)
+    {
+        lock (_lock)
+        {
+            _root = LayoutReducer.SetSplitRatio(_root, nodeId, newRatio);
+            RecomputeRects();
+        }
+
+        LayoutChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Swaps the active pane's content with the neighbor in the given direction.
+    /// No-op if no neighbor exists in that direction.
+    /// </summary>
+    public void SwapActivePane(Direction direction)
+    {
+        lock (_lock)
+        {
+            var neighborId = LayoutReducer.FindDirectionalFocus(
+                _root, _activePaneId, direction, _paneRects);
+
+            if (neighborId is null) return;
+
+            _root = LayoutReducer.SwapPanes(_root, _activePaneId, neighborId);
+            RecomputeRects();
+        }
+
+        LayoutChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Moves source pane adjacent to target pane in the given direction.
+    /// </summary>
+    public void MovePane(string sourcePaneId, string targetPaneId, Direction dropSide)
+    {
+        lock (_lock)
+        {
+            _root = LayoutReducer.MovePaneToTarget(_root, sourcePaneId, targetPaneId, dropSide);
+            RecomputeRects();
+        }
+
+        LayoutChanged?.Invoke();
+    }
+
+    /// <summary>
     /// Resizes the active pane in the given direction.
     /// </summary>
     public void ResizeActivePane(Direction direction, double step = LayoutReducer.ResizeStep)
