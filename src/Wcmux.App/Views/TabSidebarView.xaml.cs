@@ -19,7 +19,6 @@ public sealed partial class TabSidebarView : UserControl
     private readonly SolidColorBrush _attentionForeground = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
     private readonly SolidColorBrush _defaultForeground = new(Windows.UI.Color.FromArgb(255, 204, 204, 204));
     private readonly SolidColorBrush _cwdForeground = new(Windows.UI.Color.FromArgb(255, 128, 128, 128));
-    private readonly SolidColorBrush _previewForeground = new(Windows.UI.Color.FromArgb(255, 96, 96, 96));
     private readonly SolidColorBrush _activeBg = new(Windows.UI.Color.FromArgb(255, 45, 45, 45));
     private readonly SolidColorBrush _transparentBg = new(Windows.UI.Color.FromArgb(0, 0, 0, 0));
     private readonly SolidColorBrush _closeButtonFg = new(Windows.UI.Color.FromArgb(255, 136, 136, 136));
@@ -139,29 +138,22 @@ public sealed partial class TabSidebarView : UserControl
                 }
             }
 
-            // Get cwd and preview text from the active pane
+            // Get cwd from the active pane
             var cwd = "";
-            var previewLines = Array.Empty<string>();
             var workspace2 = _viewModel.GetWorkspace(tabId);
             if (workspace2 is not null)
             {
                 var activePaneId = workspace2.LayoutStore.ActivePaneId;
                 var session = workspace2.GetSessionForPane(activePaneId);
                 cwd = session?.LastKnownCwd ?? "";
-
-                // Get preview text from the WorkspaceView if available
-                if (_tabViews is not null && _tabViews.TryGetValue(tabId, out var workspaceView))
-                {
-                    previewLines = workspaceView.GetPreviewText(activePaneId, 2);
-                }
             }
 
-            var entry = CreateSidebarTabEntry(tabId, tab.Label, cwd, previewLines, isActive, hasAttention);
+            var entry = CreateSidebarTabEntry(tabId, tab.Label, cwd, isActive, hasAttention);
             TabList.Children.Add(entry);
         }
     }
 
-    private Grid CreateSidebarTabEntry(string tabId, string label, string cwd, string[] previewLines, bool isActive, bool hasAttention)
+    private Grid CreateSidebarTabEntry(string tabId, string label, string cwd, bool isActive, bool hasAttention)
     {
         var grid = new Grid
         {
@@ -227,22 +219,7 @@ public sealed partial class TabSidebarView : UserControl
             textStack.Children.Add(cwdBlock);
         }
 
-        // Row 3: Preview text (2 lines max)
-        if (previewLines.Length > 0)
-        {
-            var previewText = string.Join("\n", previewLines);
-            var previewBlock = new TextBlock
-            {
-                Text = previewText,
-                FontSize = 10,
-                Foreground = _previewForeground,
-                MaxLines = 2,
-                TextWrapping = TextWrapping.NoWrap,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                Margin = new Thickness(0, 2, 0, 0),
-            };
-            textStack.Children.Add(previewBlock);
-        }
+        // Preview text removed per user preference
 
         grid.Children.Add(textStack);
 
