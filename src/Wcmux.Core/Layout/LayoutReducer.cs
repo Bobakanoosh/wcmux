@@ -192,6 +192,76 @@ public static class LayoutReducer
     }
 
     /// <summary>
+    /// Sets the ratio of a specific SplitNode identified by <paramref name="nodeId"/>.
+    /// The ratio is clamped to MinRatio..MaxRatio. Returns the original tree if the
+    /// node is not found.
+    /// </summary>
+    public static LayoutNode SetSplitRatio(LayoutNode root, string nodeId, double newRatio)
+    {
+        return SetSplitRatioInTree(root, nodeId, Math.Clamp(newRatio, MinRatio, MaxRatio));
+    }
+
+    /// <summary>
+    /// Swaps the content (PaneId, SessionId, Kind) of two leaf nodes while preserving
+    /// the tree structure. Returns the original tree if either pane is not found or
+    /// both IDs are the same.
+    /// </summary>
+    public static LayoutNode SwapPanes(LayoutNode root, string paneIdA, string paneIdB)
+    {
+        if (paneIdA == paneIdB) return root;
+
+        var leafA = FindLeaf(root, paneIdA);
+        var leafB = FindLeaf(root, paneIdB);
+
+        if (leafA is null || leafB is null) return root;
+
+        // Walk tree replacing A's data with B's and vice versa
+        return SwapLeavesInTree(root, leafA, leafB);
+    }
+
+    /// <summary>
+    /// Detaches <paramref name="sourcePaneId"/> from the tree and re-inserts it
+    /// adjacent to <paramref name="targetPaneId"/> in the specified direction.
+    /// Left/Right creates a Vertical split; Up/Down creates Horizontal.
+    /// Left/Up places source as First child; Right/Down as Second.
+    /// Returns the original tree if source == target or source is the only pane.
+    /// </summary>
+    public static LayoutNode MovePaneToTarget(
+        LayoutNode root,
+        string sourcePaneId,
+        string targetPaneId,
+        Direction dropSide)
+    {
+        if (sourcePaneId == targetPaneId) return root;
+
+        // Find source leaf data before removing
+        var sourceLeaf = FindLeaf(root, sourcePaneId);
+        if (sourceLeaf is null) return root;
+
+        // Remove source from tree
+        var treeAfterClose = ClosePane(root, sourcePaneId);
+        if (treeAfterClose is null) return root; // was the only pane
+
+        // Determine axis and insert order from direction
+        var axis = dropSide is Direction.Left or Direction.Right
+            ? SplitAxis.Vertical
+            : SplitAxis.Horizontal;
+
+        bool sourceIsFirst = dropSide is Direction.Left or Direction.Up;
+
+        // Create a new leaf preserving source's data
+        var newSourceLeaf = new LeafNode
+        {
+            PaneId = sourceLeaf.PaneId,
+            SessionId = sourceLeaf.SessionId,
+            Kind = sourceLeaf.Kind,
+        };
+
+        // Insert adjacent to target
+        return InsertPaneAtTarget(treeAfterClose, targetPaneId, newSourceLeaf, axis, sourceIsFirst);
+    }
+
+    /// <summary>
     /// Collects all pane IDs from the tree.
     /// </summary>
     public static List<string> GetAllPaneIds(LayoutNode root)
@@ -381,6 +451,95 @@ public static class LayoutReducer
             CollectPaneIds(split.First, ids);
             CollectPaneIds(split.Second, ids);
         }
+    }
+
+    private static LeafNode? FindLeaf(LayoutNode node, string paneId)
+    {
+        if (node is LeafNode leaf && leaf.PaneId == paneId)
+            return leaf;
+
+        if (node is SplitNode split)
+        {
+            var result = FindLeaf(split.First, paneId);
+            if (result is not null) return result;
+            return FindLeaf(split.Second, paneId);
+        }
+
+        return null;
+    }
+
+    private static LayoutNode SetSplitRatioInTree(LayoutNode node, string nodeId, double clampedRatio)
+    {
+        if (node is SplitNode split)
+        {
+            if (split.NodeId == nodeId)
+                return split with { Ratio = clampedRatio };
+
+            var newFirst = SetSplitRatioInTree(split.First, nodeId, clampedRatio);
+            if (!ReferenceEquals(newFirst, split.First))
+                return split with { First = newFirst };
+
+            var newSecond = SetSplitRatioInTree(split.Second, nodeId, clampedRatio);
+            if (!ReferenceEquals(newSecond, split.Second))
+                return split with { Second = newSecond };
+        }
+
+        return node;
+    }
+
+    private static LayoutNode SwapLeavesInTree(LayoutNode node, LeafNode leafA, LeafNode leafB)
+    {
+        if (node is LeafNode leaf)
+        {
+            if (leaf.PaneId == leafA.PaneId)
+                return leaf with { PaneId = leafB.PaneId, SessionId = leafB.SessionId, Kind = leafB.Kind };
+            if (leaf.PaneId == leafB.PaneId)
+                return leaf with { PaneId = leafA.PaneId, SessionId = leafA.SessionId, Kind = leafA.Kind };
+            return node;
+        }
+
+        if (node is SplitNode split)
+        {
+            var newFirst = SwapLeavesInTree(split.First, leafA, leafB);
+            var newSecond = SwapLeavesInTree(split.Second, leafA, leafB);
+
+            if (!ReferenceEquals(newFirst, split.First) || !ReferenceEquals(newSecond, split.Second))
+                return split with { First = newFirst, Second = newSecond };
+        }
+
+        return node;
+    }
+
+    private static LayoutNode InsertPaneAtTarget(
+        LayoutNode node,
+        string targetPaneId,
+        LeafNode sourceLeaf,
+        SplitAxis axis,
+        bool sourceIsFirst)
+    {
+        if (node is LeafNode leaf && leaf.PaneId == targetPaneId)
+        {
+            return new SplitNode
+            {
+                Axis = axis,
+                Ratio = 0.5,
+                First = sourceIsFirst ? sourceLeaf : leaf,
+                Second = sourceIsFirst ? leaf : sourceLeaf,
+            };
+        }
+
+        if (node is SplitNode split)
+        {
+            var newFirst = InsertPaneAtTarget(split.First, targetPaneId, sourceLeaf, axis, sourceIsFirst);
+            if (!ReferenceEquals(newFirst, split.First))
+                return split with { First = newFirst };
+
+            var newSecond = InsertPaneAtTarget(split.Second, targetPaneId, sourceLeaf, axis, sourceIsFirst);
+            if (!ReferenceEquals(newSecond, split.Second))
+                return split with { Second = newSecond };
+        }
+
+        return node;
     }
 
     private static void ComputeRectsRecursive(
