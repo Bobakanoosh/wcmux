@@ -30,7 +30,7 @@ public sealed partial class MainWindow : Window
 
         // Custom title bar setup -- order matters: ExtendsContentIntoTitleBar MUST be set before PreferredHeightOption
         ExtendsContentIntoTitleBar = true;
-        AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+        AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
 
         // Caption button dark-theme colors
         AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;

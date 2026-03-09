@@ -9,7 +9,7 @@
     Title="wcmux">
     <Grid Background="#1e1e1e">
         <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
+            <RowDefinition Height="32" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -25,10 +25,10 @@
             <FontIcon Grid.Column="0"
                       Glyph="&#xE756;"
                       FontFamily="Segoe MDL2 Assets"
-                      FontSize="16"
+                      FontSize="14"
                       Foreground="#cccccc"
                       VerticalAlignment="Center"
-                      Margin="16,0,0,0" />
+                      Margin="12,0,0,0" />
 
             <TextBlock Grid.Column="1"
                        Text="wcmux"
@@ -36,7 +36,7 @@
                        FontSize="12"
                        FontWeight="Normal"
                        VerticalAlignment="Center"
-                       Margin="12,0,0,0"
+                       Margin="8,0,0,0"
                        IsHitTestVisible="False" />
         </Grid>
 
