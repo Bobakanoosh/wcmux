@@ -41,7 +41,7 @@
 - [x] **PBAR-01**: User sees a tab-like title bar above each pane showing the foreground process name.
 - [x] **PBAR-02**: User can close a pane via an X button in its title bar.
 - [x] **PBAR-03**: User can split a pane horizontally or vertically via icon buttons in the pane title bar.
-- [ ] **PBAR-04**: User can open a browser pane via a button in the pane title bar.
+- [x] **PBAR-04**: User can open a browser pane via a button in the pane title bar.
 
 ### Vertical Tab Sidebar
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PBAR-01 | Phase 5 | Complete |
 | PBAR-02 | Phase 5 | Complete |
 | PBAR-03 | Phase 5 | Complete |
-| PBAR-04 | Phase 5 | Pending |
+| PBAR-04 | Phase 5 | Complete |
 | SIDE-01 | Phase 6 | Pending |
 | SIDE-02 | Phase 6 | Pending |
 | SIDE-03 | Phase 6 | Pending |

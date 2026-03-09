@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI/UX Overhaul
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-09T03:12:00.000Z"
-last_activity: 2026-03-09 — Completed 05-01 pane title bars with process detection
+stopped_at: Completed 05-02-PLAN.md (awaiting human-verify checkpoint)
+last_updated: "2026-03-09T03:16:00.000Z"
+last_activity: 2026-03-09 — Completed 05-02 browser pane hosting (awaiting visual verification)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 10
-  completed_plans: 10
-  percent: 33
+  completed_plans: 11
+  percent: 37
 ---
 
 # Project State
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 5 of 7 (Pane Title Bars and Browser Panes)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase (awaiting human-verify checkpoint)
 Status: Executing
-Last activity: 2026-03-09 — Completed 05-01 pane title bars with process detection
+Last activity: 2026-03-09 — Completed 05-02 browser pane hosting (awaiting visual verification)
 
-Progress: [████░░░░░░] 33%
+Progress: [████░░░░░░] 37%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (phases 4-5)
+- Total plans completed: 4 (phases 4-5)
 - Average duration: 5 min
-- Total execution time: 0.25 hours
+- Total execution time: 0.33 hours
 
 ## Accumulated Context
 
@@ -56,6 +56,9 @@ Recent decisions affecting current work:
 - [05-01] Single shared DispatcherTimer (2s) for process name polling instead of per-pane timers
 - [05-01] 24px pane title bar height for compact terminal aesthetic
 - [05-01] Process names displayed without .exe extension
+- [05-02] Used PreviewKeyDown instead of AcceleratorKeyPressed for browser pane shortcut interception
+- [05-02] Browser panes use sentinel session ID with "browser:" prefix (no ConPTY session)
+- [05-02] Browser title bar shows static "browser" label with close button only
 
 ### Pending Todos
 
@@ -67,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09T03:12:00.000Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-09T03:16:00.000Z
+Stopped at: Completed 05-02-PLAN.md (awaiting human-verify checkpoint)
 Resume file: None

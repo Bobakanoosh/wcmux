@@ -69,7 +69,7 @@ Plans:
 **Milestone Goal:** Replace default Windows chrome and horizontal tabs with a polished dark UI, vertical tab sidebar with output previews, pane title bars with inline actions, and refined pane interaction.
 
 - [x] **Phase 4: Custom Chrome and WebView2 Foundation** - Replace default title bar with custom dark chrome and establish shared WebView2 environment. (completed 2026-03-09)
-- [ ] **Phase 5: Pane Title Bars and Browser Panes** - Add per-pane title bars with process detection, close/split actions, and browser pane hosting.
+- [x] **Phase 5: Pane Title Bars and Browser Panes** - Add per-pane title bars with process detection, close/split actions, and browser pane hosting. (completed 2026-03-09)
 - [ ] **Phase 6: Vertical Tab Sidebar** - Replace horizontal tab bar with vertical sidebar showing tab title, cwd, output preview, and attention state.
 - [ ] **Phase 7: Pane Interaction** - Enable mouse resize, keyboard swap, and drag-to-rearrange for pane management.
 
@@ -144,6 +144,6 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 2. Tabbed Multiplexer Shell | v1.0 | 2/2 | Complete | 2026-03-07 |
 | 3. Attention And Windows Integration | v1.0 | 2/2 | Complete | 2026-03-08 |
 | 4. Custom Chrome and WebView2 Foundation | v1.1 | 2/2 | Complete | 2026-03-09 |
-| 5. Pane Title Bars and Browser Panes | 1/2 | In Progress|  | - |
+| 5. Pane Title Bars and Browser Panes | 2/2 | Complete   | 2026-03-09 | - |
 | 6. Vertical Tab Sidebar | v1.1 | 0/? | Not started | - |
 | 7. Pane Interaction | v1.1 | 0/? | Not started | - |
