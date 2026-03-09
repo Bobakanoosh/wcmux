@@ -43,6 +43,8 @@ public sealed partial class MainWindow : Window
         // Track window focus state for notification gating
         var wasFocused = _isWindowFocused;
         _isWindowFocused = args.WindowActivationState != WindowActivationState.Deactivated;
+        System.Diagnostics.Debug.WriteLine(
+            $"[wcmux] Window activation: state={args.WindowActivationState}, focused={_isWindowFocused}");
 
         // On regain focus (transition from unfocused to focused): dismiss pending toasts
         if (_isWindowFocused && !wasFocused && _notificationService is not null)
@@ -68,28 +70,13 @@ public sealed partial class MainWindow : Window
 
     private void OnAttentionChangedForNotification(string paneId)
     {
-        // Only fire toast when attention is raised AND window is not focused
-        if (!_attentionStore.HasAttention(paneId) || _isWindowFocused) return;
-        if (_tabViewModel is null || _notificationService is null) return;
+        var hasAtt = _attentionStore.HasAttention(paneId);
+        System.Diagnostics.Debug.WriteLine(
+            $"[wcmux] AttentionChanged: pane={paneId}, hasAttention={hasAtt}, windowFocused={_isWindowFocused}");
 
-        // Find the tab and pane title for toast content
-        foreach (var tabId in _tabViewModel.TabStore.TabOrder)
-        {
-            var workspace = _tabViewModel.GetWorkspace(tabId);
-            if (workspace is null) continue;
-
-            if (workspace.LayoutStore.AllPaneIds.Contains(paneId))
-            {
-                var tab = _tabViewModel.TabStore.GetTab(tabId);
-                var tabLabel = tab?.Label ?? "Unknown";
-                var session = workspace.GetSessionForPane(paneId);
-                var paneTitle = session?.LastKnownCwd ?? "";
-
-                _notificationService.ShowAttentionToast(tabId, tabLabel, paneId, paneTitle);
-                _notificationService.FlashTaskbar();
-                return;
-            }
-        }
+        // Notifications are now fired directly from OnGlobalSessionEvent to
+        // cover both active-pane and inactive-pane bells when the window is
+        // unfocused. This handler only logs for diagnostics.
     }
 
     private void OnToastActivated(string tabId, string paneId)
@@ -333,7 +320,23 @@ public sealed partial class MainWindow : Window
                 {
                     if (workspace.GetSessionIdForPane(paneId) == bellEvt.SessionId)
                     {
+                        // RaiseBell handles per-pane attention visuals (suppresses
+                        // for the focused pane, which is correct for in-app indicators).
                         _attentionStore.RaiseBell(paneId, activePaneId, DateTimeOffset.UtcNow);
+
+                        // Window-level notifications should fire even for the active
+                        // pane when the window itself is unfocused (e.g., Claude Code
+                        // waiting for input while the user is in another app).
+                        if (!_isWindowFocused && _notificationService is not null)
+                        {
+                            var tab = _tabViewModel.TabStore.GetTab(tabId);
+                            var tabLabel = tab?.Label ?? "Unknown";
+                            var session = workspace.GetSessionForPane(paneId);
+                            var paneTitle = session?.LastKnownCwd ?? "";
+
+                            _notificationService.ShowAttentionToast(tabId, tabLabel, paneId, paneTitle);
+                            _notificationService.FlashTaskbar();
+                        }
                         return;
                     }
                 }

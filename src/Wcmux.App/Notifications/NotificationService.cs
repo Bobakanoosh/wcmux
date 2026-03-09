@@ -41,18 +41,25 @@ public sealed class NotificationService
     /// </summary>
     public void ShowAttentionToast(string tabId, string tabLabel, string paneId, string paneTitle)
     {
-        var notification = new AppNotificationBuilder()
-            .AddArgument("action", "focusPane")
-            .AddArgument("tabId", tabId)
-            .AddArgument("paneId", paneId)
-            .AddText($"wcmux -- Tab: {tabLabel}")
-            .AddText(paneTitle)
-            .BuildNotification();
+        try
+        {
+            var notification = new AppNotificationBuilder()
+                .AddArgument("action", "focusPane")
+                .AddArgument("tabId", tabId)
+                .AddArgument("paneId", paneId)
+                .AddText($"wcmux -- Tab: {tabLabel}")
+                .AddText(paneTitle)
+                .BuildNotification();
 
-        notification.Tag = paneId;
-        notification.Group = tabId;
+            notification.Tag = paneId;
+            notification.Group = tabId;
 
-        AppNotificationManager.Default.Show(notification);
+            AppNotificationManager.Default.Show(notification);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[wcmux] Toast notification failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -77,6 +84,13 @@ public sealed class NotificationService
     /// </summary>
     public async Task DismissAllAsync()
     {
-        await AppNotificationManager.Default.RemoveAllAsync();
+        try
+        {
+            await AppNotificationManager.Default.RemoveAllAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[wcmux] Toast dismiss failed: {ex.Message}");
+        }
     }
 }

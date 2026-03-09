@@ -17,7 +17,7 @@ public sealed partial class WorkspaceView : UserControl
     private WorkspaceViewModel? _viewModel;
     private AttentionStore? _attentionStore;
     private readonly Dictionary<string, TerminalPaneView> _paneViews = new();
-    private readonly SolidColorBrush _activeBorderBrush = new(Windows.UI.Color.FromArgb(255, 0, 122, 204));
+    private readonly SolidColorBrush _activeBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
     private readonly SolidColorBrush _inactiveBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
     private readonly SolidColorBrush _attentionBorderBrush = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
     private readonly Dictionary<string, TextBlock> _paneTitles = new();
@@ -402,7 +402,7 @@ public sealed partial class WorkspaceView : UserControl
     /// (split, close). Focus/resize commands operate on the current active pane.
     /// </summary>
     private static bool IsPaneSpecificCommand(string command)
-        => command is "split-horizontal" or "split-vertical" or "close-pane";
+        => command is "split-horizontal" or "split-vertical" or "close-pane" or "focus-pane";
 
     private async Task HandlePaneCommandAsync(string command)
     {

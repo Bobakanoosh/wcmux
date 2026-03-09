@@ -15,6 +15,7 @@ public sealed class WebViewTerminalController : IAsyncDisposable
     private readonly WebView2 _webView;
     private Action<byte[]>? _onInput;
     private Action<int, int>? _onResize;
+    private Action<string>? _onCommand;
     private Action? _onReady;
     private bool _disposed;
     private bool _initialized;
@@ -36,11 +37,13 @@ public sealed class WebViewTerminalController : IAsyncDisposable
     public async Task InitializeAsync(
         Action<byte[]> onInput,
         Action<int, int> onResize,
-        Action? onReady = null)
+        Action? onReady = null,
+        Action<string>? onCommand = null)
     {
         _onInput = onInput ?? throw new ArgumentNullException(nameof(onInput));
         _onResize = onResize ?? throw new ArgumentNullException(nameof(onResize));
         _onReady = onReady;
+        _onCommand = onCommand;
 
         // Initialize WebView2 environment
         await _webView.EnsureCoreWebView2Async();
@@ -85,11 +88,13 @@ public sealed class WebViewTerminalController : IAsyncDisposable
     }
 
     /// <summary>
-    /// Focuses the terminal surface.
+    /// Focuses the terminal surface. Moves both WinUI keyboard focus to the
+    /// WebView2 control and xterm.js focus within the hosted page.
     /// </summary>
     public async Task FocusAsync()
     {
         if (_disposed || !_initialized) return;
+        _webView.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
         await _webView.CoreWebView2.ExecuteScriptAsync("focus()");
     }
 
@@ -141,6 +146,14 @@ public sealed class WebViewTerminalController : IAsyncDisposable
                     var cols = root.GetProperty("cols").GetInt32();
                     var rows = root.GetProperty("rows").GetInt32();
                     _onResize?.Invoke(cols, rows);
+                    break;
+
+                case "command":
+                    var command = root.GetProperty("command").GetString();
+                    if (command is not null)
+                    {
+                        _onCommand?.Invoke(command);
+                    }
                     break;
             }
         }

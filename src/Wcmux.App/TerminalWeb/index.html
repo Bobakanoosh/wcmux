@@ -9,6 +9,11 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1e1e; }
     #terminal-container { width: 100%; height: 100%; }
+    /* Slim dark scrollbar for the terminal viewport */
+    .xterm-viewport::-webkit-scrollbar { width: 8px; }
+    .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+    .xterm-viewport::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    .xterm-viewport::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
   </style>
 </head>
 <body>

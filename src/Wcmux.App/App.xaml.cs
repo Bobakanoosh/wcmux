@@ -22,8 +22,23 @@ public partial class App : Application
     {
         // CRITICAL: Subscribe before Register() per Windows App SDK requirements.
         // If Register() is called first, toast activation spawns a new process.
-        AppNotificationManager.Default.NotificationInvoked += OnNotificationInvoked;
-        AppNotificationManager.Default.Register();
+        try
+        {
+            AppNotificationManager.Default.NotificationInvoked += OnNotificationInvoked;
+            AppNotificationManager.Default.Register();
+
+            var setting = AppNotificationManager.Default.Setting;
+            if (setting != AppNotificationSetting.Enabled)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[wcmux] App notifications not enabled. Setting: {setting}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[wcmux] Notification registration failed: {ex.Message}");
+        }
 
         _window = new MainWindow();
         _window.Activate();
@@ -46,6 +61,14 @@ public partial class App : Application
     /// </summary>
     public static void UnregisterNotifications()
     {
-        AppNotificationManager.Default.Unregister();
+        try
+        {
+            AppNotificationManager.Default.Unregister();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[wcmux] Notification unregister failed: {ex.Message}");
+        }
     }
 }

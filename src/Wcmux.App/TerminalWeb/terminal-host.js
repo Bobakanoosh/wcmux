@@ -221,6 +221,17 @@
     term.dispose();
   };
 
+  // Notify native host when terminal receives focus (e.g., mouse click).
+  // WebView2 captures pointer events before they reach WinUI, so the native
+  // PointerPressed handler on the border never fires. This bridges the gap.
+  term.textarea.addEventListener("focus", function () {
+    try {
+      window.chrome.webview.postMessage(JSON.stringify({ type: "command", command: "focus-pane" }));
+    } catch (e) {
+      // Not in WebView2 context
+    }
+  });
+
   // Observe container resizes and refit
   var resizeObserver = new ResizeObserver(function () {
     fitAddon.fit();

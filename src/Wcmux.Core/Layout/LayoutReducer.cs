@@ -67,6 +67,10 @@ public static class LayoutReducer
         if (!paneRects.TryGetValue(fromPaneId, out var fromRect))
             return null;
 
+        var fromLeft = fromRect.X;
+        var fromRight = fromRect.X + fromRect.Width;
+        var fromTop = fromRect.Y;
+        var fromBottom = fromRect.Y + fromRect.Height;
         var fromCenterX = fromRect.X + fromRect.Width / 2;
         var fromCenterY = fromRect.Y + fromRect.Height / 2;
 
@@ -77,27 +81,40 @@ public static class LayoutReducer
         {
             if (paneId == fromPaneId) continue;
 
+            var left = rect.X;
+            var right = rect.X + rect.Width;
+            var top = rect.Y;
+            var bottom = rect.Y + rect.Height;
             var centerX = rect.X + rect.Width / 2;
             var centerY = rect.Y + rect.Height / 2;
 
+            // Edge-based direction check: the candidate's near edge must be
+            // at or beyond the source pane's far edge in that direction.
+            // A small tolerance handles floating-point rounding at shared
+            // split boundaries.
+            const double tolerance = 1.0;
             bool isInDirection = direction switch
             {
-                Direction.Left => centerX < fromRect.X,
-                Direction.Right => centerX > fromRect.X + fromRect.Width,
-                Direction.Up => centerY < fromRect.Y,
-                Direction.Down => centerY > fromRect.Y + fromRect.Height,
+                Direction.Left => right <= fromLeft + tolerance,
+                Direction.Right => left >= fromRight - tolerance,
+                Direction.Up => bottom <= fromTop + tolerance,
+                Direction.Down => top >= fromBottom - tolerance,
                 _ => false,
             };
 
             if (!isInDirection) continue;
 
-            // Distance: primary axis distance + perpendicular offset penalty
+            // Edge-to-edge primary distance + perpendicular center offset penalty
             double dist = direction switch
             {
-                Direction.Left or Direction.Right =>
-                    Math.Abs(centerX - fromCenterX) + Math.Abs(centerY - fromCenterY) * 0.5,
-                Direction.Up or Direction.Down =>
-                    Math.Abs(centerY - fromCenterY) + Math.Abs(centerX - fromCenterX) * 0.5,
+                Direction.Left =>
+                    (fromLeft - right) + Math.Abs(centerY - fromCenterY) * 0.5,
+                Direction.Right =>
+                    (left - fromRight) + Math.Abs(centerY - fromCenterY) * 0.5,
+                Direction.Up =>
+                    (fromTop - bottom) + Math.Abs(centerX - fromCenterX) * 0.5,
+                Direction.Down =>
+                    (top - fromBottom) + Math.Abs(centerX - fromCenterX) * 0.5,
                 _ => double.MaxValue,
             };
 
