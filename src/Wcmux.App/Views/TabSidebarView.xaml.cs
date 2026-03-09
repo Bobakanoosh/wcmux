@@ -314,6 +314,12 @@ public sealed partial class TabSidebarView : UserControl
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0),
             SelectionStart = 0,
+            // Dark theme styling
+            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 30, 30)),
+            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204)),
+            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 80, 80, 80)),
+            BorderThickness = new Thickness(1),
+            RequestedTheme = ElementTheme.Dark,
         };
         textBox.SelectAll();
 
