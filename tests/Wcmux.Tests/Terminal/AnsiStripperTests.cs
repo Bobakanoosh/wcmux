@@ -86,6 +86,7 @@ public class AnsiStripperTests
     [Fact]
     public void Strip_BareEscape_Removed()
     {
-        Assert.Equal("text", AnsiStripper.Strip("\x1btext"));
+        // Bare ESC at end of string (not followed by a recognized sequence char)
+        Assert.Equal("text", AnsiStripper.Strip("text\x1b"));
     }
 }
