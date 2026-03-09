@@ -79,6 +79,9 @@ public sealed partial class WorkspaceView : UserControl
         _processNameTimer.Tick += OnProcessNameTimerTick;
         _processNameTimer.Start();
 
+        // Initialize the drag preview overlay (once)
+        InitDragPreview();
+
         await RenderLayoutAsync();
     }
 
@@ -447,6 +450,9 @@ public sealed partial class WorkspaceView : UserControl
         titleBar.Children.Add(processNameBlock);
         titleBar.Children.Add(buttonPanel);
 
+        // Attach drag-to-rearrange handlers on the title bar
+        AttachDragHandlers(titleBar, paneId);
+
         return titleBar;
     }
 
@@ -532,6 +538,9 @@ public sealed partial class WorkspaceView : UserControl
 
         titleBar.Children.Add(processNameBlock);
         titleBar.Children.Add(buttonPanel);
+
+        // Attach drag-to-rearrange handlers on the title bar
+        AttachDragHandlers(titleBar, paneId);
 
         return titleBar;
     }
@@ -966,6 +975,196 @@ public sealed partial class WorkspaceView : UserControl
 
             RootContainer.Children.Add(handle);
             _resizeHandles.Add(handle);
+        }
+    }
+
+    #endregion
+
+    #region Drag-to-Rearrange
+
+    /// <summary>
+    /// Creates the semi-transparent blue drag preview overlay (once during initialization).
+    /// </summary>
+    private void InitDragPreview()
+    {
+        _dragPreview = new Border
+        {
+            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(80, 50, 130, 240)), // semi-transparent blue
+            IsHitTestVisible = false,
+            Visibility = Visibility.Collapsed,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+        RootContainer.Children.Add(_dragPreview);
+    }
+
+    /// <summary>
+    /// Attaches pointer event handlers to a title bar Grid for drag-to-rearrange.
+    /// </summary>
+    private void AttachDragHandlers(Grid titleBar, string paneId)
+    {
+        titleBar.PointerPressed += (s, e) =>
+        {
+            if (!e.GetCurrentPoint(titleBar).Properties.IsLeftButtonPressed) return;
+
+            _dragStartPoint = e.GetCurrentPoint(RootContainer).Position;
+            _dragSourcePaneId = paneId;
+            _isDraggingPane = false; // Wait for threshold
+            titleBar.CapturePointer(e.Pointer);
+            e.Handled = true;
+        };
+
+        titleBar.PointerMoved += (s, e) =>
+        {
+            if (_dragSourcePaneId is null) return;
+
+            var pos = e.GetCurrentPoint(RootContainer).Position;
+
+            if (!_isDraggingPane)
+            {
+                // Check if we've exceeded the drag threshold
+                var dx = pos.X - _dragStartPoint.X;
+                var dy = pos.Y - _dragStartPoint.Y;
+                if (Math.Sqrt(dx * dx + dy * dy) < DragThreshold) return;
+
+                _isDraggingPane = true;
+
+                // Hide resize handles during drag to avoid visual clutter
+                foreach (var handle in _resizeHandles)
+                {
+                    handle.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            // Hit test to find target pane and direction
+            var (targetPaneId, dropSide) = HitTestDropZone(pos);
+            if (targetPaneId is not null)
+            {
+                UpdateDragPreview(targetPaneId, dropSide);
+            }
+            else
+            {
+                if (_dragPreview is not null)
+                    _dragPreview.Visibility = Visibility.Collapsed;
+            }
+
+            e.Handled = true;
+        };
+
+        titleBar.PointerReleased += (s, e) =>
+        {
+            if (_isDraggingPane && _dragSourcePaneId is not null)
+            {
+                var pos = e.GetCurrentPoint(RootContainer).Position;
+                var (targetPaneId, dropSide) = HitTestDropZone(pos);
+
+                if (targetPaneId is not null)
+                {
+                    _viewModel?.MovePane(_dragSourcePaneId, targetPaneId, dropSide);
+                }
+            }
+
+            ResetDragState();
+            titleBar.ReleasePointerCapture(e.Pointer);
+            e.Handled = true;
+        };
+
+        titleBar.PointerCaptureLost += (s, e) =>
+        {
+            ResetDragState();
+        };
+    }
+
+    /// <summary>
+    /// Determines which pane the pointer is over and which directional zone (L/R/T/B).
+    /// </summary>
+    private (string? targetPaneId, Direction dropSide) HitTestDropZone(Point pos)
+    {
+        if (_viewModel is null) return (null, Direction.Left);
+
+        var paneRects = _viewModel.LayoutStore.PaneRects;
+
+        foreach (var (paneId, rect) in paneRects)
+        {
+            // Skip source pane
+            if (paneId == _dragSourcePaneId) continue;
+
+            // Check if pointer is within this pane's rect
+            if (pos.X < rect.X || pos.X > rect.X + rect.Width) continue;
+            if (pos.Y < rect.Y || pos.Y > rect.Y + rect.Height) continue;
+
+            // Determine direction using quadrant logic
+            var relX = (pos.X - rect.X) / rect.Width;
+            var relY = (pos.Y - rect.Y) / rect.Height;
+
+            Direction dropSide;
+            if (relX < 0.25)
+                dropSide = Direction.Left;
+            else if (relX > 0.75)
+                dropSide = Direction.Right;
+            else if (relY < 0.5)
+                dropSide = Direction.Up;
+            else
+                dropSide = Direction.Down;
+
+            return (paneId, dropSide);
+        }
+
+        return (null, Direction.Left);
+    }
+
+    /// <summary>
+    /// Updates the drag preview overlay to show half of the target pane in the drop direction.
+    /// </summary>
+    private void UpdateDragPreview(string targetPaneId, Direction dropSide)
+    {
+        if (_dragPreview is null || _viewModel is null) return;
+
+        var paneRects = _viewModel.LayoutStore.PaneRects;
+        if (!paneRects.TryGetValue(targetPaneId, out var rect)) return;
+
+        double previewX = rect.X, previewY = rect.Y;
+        double previewW = rect.Width, previewH = rect.Height;
+
+        switch (dropSide)
+        {
+            case Direction.Left:
+                previewW = rect.Width / 2;
+                break;
+            case Direction.Right:
+                previewX = rect.X + rect.Width / 2;
+                previewW = rect.Width / 2;
+                break;
+            case Direction.Up:
+                previewH = rect.Height / 2;
+                break;
+            case Direction.Down:
+                previewY = rect.Y + rect.Height / 2;
+                previewH = rect.Height / 2;
+                break;
+        }
+
+        _dragPreview.Margin = new Thickness(previewX, previewY, 0, 0);
+        _dragPreview.Width = Math.Max(0, previewW);
+        _dragPreview.Height = Math.Max(0, previewH);
+        _dragPreview.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Resets all drag-to-rearrange state and hides the preview overlay.
+    /// </summary>
+    private void ResetDragState()
+    {
+        _isDraggingPane = false;
+        _dragSourcePaneId = null;
+
+        if (_dragPreview is not null)
+            _dragPreview.Visibility = Visibility.Collapsed;
+
+        // Show resize handles again
+        foreach (var handle in _resizeHandles)
+        {
+            handle.Visibility = Visibility.Visible;
         }
     }
 
