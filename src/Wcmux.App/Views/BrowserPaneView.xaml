@@ -53,7 +53,14 @@
                      Background="#3C3C3C" Foreground="#CCCCCC"
                      BorderThickness="0"
                      Padding="6,2"
-                     KeyDown="OnAddressBoxKeyDown" />
+                     KeyDown="OnAddressBoxKeyDown">
+                <TextBox.Resources>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#3C3C3C" />
+                    <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#CCCCCC" />
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#454545" />
+                    <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#CCCCCC" />
+                </TextBox.Resources>
+            </TextBox>
 
             <Button x:Name="GoButton" Grid.Column="4"
                     Width="28" Height="24" MinWidth="0" MinHeight="0"

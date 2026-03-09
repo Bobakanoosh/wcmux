@@ -36,7 +36,7 @@ public sealed partial class BrowserPaneView : UserControl
 
     /// <summary>
     /// Initializes the WebView2 control using the shared environment cache.
-    /// Opens to about:blank with the address bar focused.
+    /// Opens to google.com with the address bar focused.
     /// </summary>
     public async Task InitializeWebViewAsync()
     {
@@ -48,14 +48,18 @@ public sealed partial class BrowserPaneView : UserControl
         // Wire up navigation events
         BrowserWebView.CoreWebView2.SourceChanged += OnSourceChanged;
         BrowserWebView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
+        BrowserWebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
         // Disable browser accelerator keys so our app shortcuts take precedence
         BrowserWebView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
 
+        // Inject key interception script on every page load
+        await BrowserWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(KeyInterceptScript);
+
         _initialized = true;
 
-        // Navigate to about:blank and focus address bar
-        BrowserWebView.CoreWebView2.Navigate("about:blank");
+        // Navigate to google.com by default
+        BrowserWebView.CoreWebView2.Navigate("https://www.google.com");
 
         // Focus the address bar so users can type immediately
         AddressBox.Focus(FocusState.Programmatic);
@@ -86,6 +90,7 @@ public sealed partial class BrowserPaneView : UserControl
         {
             BrowserWebView.CoreWebView2.SourceChanged -= OnSourceChanged;
             BrowserWebView.CoreWebView2.NavigationCompleted -= OnNavigationCompleted;
+            BrowserWebView.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
         }
 
         BrowserWebView.Close();
@@ -124,6 +129,21 @@ public sealed partial class BrowserPaneView : UserControl
         {
             e.Handled = true;
             CommandReceived?.Invoke(command);
+        }
+    }
+
+    /// <summary>
+    /// Handles messages posted from injected JavaScript key interceptor.
+    /// </summary>
+    private void OnWebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
+    {
+        var message = args.TryGetWebMessageAsString();
+        if (message is null) return;
+
+        if (message.StartsWith("cmd:"))
+        {
+            var command = message[4..];
+            DispatcherQueue?.TryEnqueue(() => CommandReceived?.Invoke(command));
         }
     }
 
@@ -194,4 +214,32 @@ public sealed partial class BrowserPaneView : UserControl
         BrowserWebView.CoreWebView2?.Navigate(url);
         BrowserWebView.Focus(FocusState.Programmatic);
     }
+
+    /// <summary>
+    /// JavaScript injected into every page to intercept Ctrl+Shift+Arrow
+    /// and other app-level shortcuts that WinUI PreviewKeyDown cannot catch
+    /// when WebView2 has focus.
+    /// </summary>
+    private const string KeyInterceptScript = """
+        document.addEventListener('keydown', function(e) {
+            if (!e.ctrlKey || !e.shiftKey) return;
+            var cmd = null;
+            switch (e.key) {
+                case 'ArrowLeft': cmd = 'focus-left'; break;
+                case 'ArrowRight': cmd = 'focus-right'; break;
+                case 'ArrowUp': cmd = 'focus-up'; break;
+                case 'ArrowDown': cmd = 'focus-down'; break;
+                case 'H': case 'h': cmd = 'split-horizontal'; break;
+                case 'V': case 'v': cmd = 'split-vertical'; break;
+                case 'W': case 'w': cmd = 'close-pane'; break;
+                case 'T': case 't': cmd = 'new-tab'; break;
+                case 'Tab': cmd = 'next-tab'; break;
+            }
+            if (cmd) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.chrome.webview.postMessage('cmd:' + cmd);
+            }
+        }, true);
+        """;
 }

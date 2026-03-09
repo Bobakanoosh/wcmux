@@ -306,11 +306,17 @@ public sealed partial class WorkspaceView : UserControl
         outerGrid.Children.Add(titleBar);
         outerGrid.Children.Add(border);
 
-        // Handle mouse click focus on the content area
-        border.PointerPressed += (s, e) =>
+        // Handle focus on the title bar click
+        titleBar.PointerPressed += (s, e) =>
         {
             _viewModel?.SetActivePane(paneId);
             e.Handled = false;
+        };
+
+        // WebView2 swallows pointer events, so use GotFocus to detect when the browser pane gets focus
+        browserView.GotFocus += (s, e) =>
+        {
+            _viewModel?.SetActivePane(paneId);
         };
 
         // Route app commands from the browser pane
@@ -448,7 +454,7 @@ public sealed partial class WorkspaceView : UserControl
         Grid.SetColumn(processNameBlock, 0);
         _paneProcessNames[paneId] = processNameBlock;
 
-        // Button panel (right side) -- browser pane only has close button
+        // Button panel (right side)
         var buttonPanel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -456,6 +462,33 @@ public sealed partial class WorkspaceView : UserControl
             Spacing = 2,
         };
         Grid.SetColumn(buttonPanel, 1);
+
+        // Split Horizontal button
+        var splitHButton = CreateTitleBarButton("\uE745", buttonBrush, transparentBrush);
+        splitHButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            _viewModel.SetActivePane(paneId);
+            await _viewModel.SplitActivePaneHorizontalAsync();
+        };
+
+        // Split Vertical button
+        var splitVButton = CreateTitleBarButton("\uE746", buttonBrush, transparentBrush);
+        splitVButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            _viewModel.SetActivePane(paneId);
+            await _viewModel.SplitActivePaneVerticalAsync();
+        };
+
+        // Browser button (globe icon)
+        var browserButton = CreateTitleBarButton("\uE774", buttonBrush, transparentBrush);
+        browserButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            _viewModel.SetActivePane(paneId);
+            await _viewModel.SplitActivePaneAsBrowserAsync(SplitAxis.Vertical);
+        };
 
         // Close button
         var closeButton = CreateTitleBarButton("\uE711", buttonBrush, transparentBrush);
@@ -465,6 +498,9 @@ public sealed partial class WorkspaceView : UserControl
             await _viewModel.ClosePaneAsync(paneId);
         };
 
+        buttonPanel.Children.Add(splitHButton);
+        buttonPanel.Children.Add(splitVButton);
+        buttonPanel.Children.Add(browserButton);
         buttonPanel.Children.Add(closeButton);
 
         titleBar.Children.Add(processNameBlock);
