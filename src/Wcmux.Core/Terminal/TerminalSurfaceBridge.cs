@@ -30,6 +30,11 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
     private readonly CancellationTokenSource _batchCts = new();
     private readonly Task _batchTask;
     private readonly object _resizeLock = new();
+    private readonly object _ringLock = new();
+    private readonly string[] _ringBuffer;
+    private readonly int _ringCapacity;
+    private int _ringHead;
+    private int _ringCount;
 
     private int _lastCols;
     private int _lastRows;
@@ -100,13 +105,15 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
     /// <param name="initialRows">Initial terminal row count.</param>
     /// <param name="batchIntervalMs">Output batch interval in ms.</param>
     /// <param name="resizeDebounceMs">Resize debounce interval in ms.</param>
+    /// <param name="ringBufferCapacity">Max lines retained in the output ring buffer (default 20).</param>
     public TerminalSurfaceBridge(
         ISession session,
         Func<string, Task> writeToSurface,
         int initialCols = 120,
         int initialRows = 30,
         int batchIntervalMs = DefaultBatchIntervalMs,
-        int resizeDebounceMs = DefaultResizeDebounceMs)
+        int resizeDebounceMs = DefaultResizeDebounceMs,
+        int ringBufferCapacity = 20)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _writeToSurface = writeToSurface ?? throw new ArgumentNullException(nameof(writeToSurface));
@@ -115,6 +122,8 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
         _lastKnownCwd = session.LastKnownCwd;
         BatchIntervalMs = batchIntervalMs;
         ResizeDebounceMs = resizeDebounceMs;
+        _ringCapacity = Math.Max(1, ringBufferCapacity);
+        _ringBuffer = new string[_ringCapacity];
 
         _batchTask = Task.Factory.StartNew(
             () => RunOutputBatchLoop(_batchCts.Token),
@@ -277,6 +286,9 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
 
             if (batch.Length == 0) continue;
 
+            // Capture plain-text lines into ring buffer for sidebar preview
+            AppendToRingBuffer(batch);
+
             try
             {
                 await _writeToSurface(batch);
@@ -300,6 +312,56 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
                 await _writeToSurface(sb.ToString());
             }
             catch { }
+        }
+    }
+
+    /// <summary>
+    /// Returns the most recent non-empty lines captured from terminal output,
+    /// with ANSI escape codes stripped. Thread-safe.
+    /// </summary>
+    /// <param name="count">Maximum number of lines to return.</param>
+    public string[] GetRecentLines(int count)
+    {
+        if (count <= 0) return [];
+
+        lock (_ringLock)
+        {
+            var available = Math.Min(count, _ringCount);
+            if (available == 0) return [];
+
+            var result = new string[available];
+
+            // Read from oldest to newest within the requested range
+            var startIdx = (_ringHead - _ringCount + _ringCapacity) % _ringCapacity;
+            var skipCount = _ringCount - available;
+            var readIdx = (startIdx + skipCount) % _ringCapacity;
+
+            for (int i = 0; i < available; i++)
+            {
+                result[i] = _ringBuffer[readIdx];
+                readIdx = (readIdx + 1) % _ringCapacity;
+            }
+
+            return result;
+        }
+    }
+
+    private void AppendToRingBuffer(string rawBatch)
+    {
+        var stripped = AnsiStripper.Strip(rawBatch);
+        var lines = stripped.Split('\n');
+
+        lock (_ringLock)
+        {
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                _ringBuffer[_ringHead] = trimmed;
+                _ringHead = (_ringHead + 1) % _ringCapacity;
+                if (_ringCount < _ringCapacity) _ringCount++;
+            }
         }
     }
 
