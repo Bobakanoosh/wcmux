@@ -645,6 +645,19 @@ public sealed partial class WorkspaceView : UserControl
     }
 
     /// <summary>
+    /// Returns the most recent plain-text output lines for a specific pane,
+    /// used by the sidebar for preview text display.
+    /// </summary>
+    public string[] GetPreviewText(string paneId, int lineCount)
+    {
+        if (_paneViews.TryGetValue(paneId, out var paneView) && paneView.Bridge is not null)
+        {
+            return paneView.Bridge.GetRecentLines(lineCount);
+        }
+        return Array.Empty<string>();
+    }
+
+    /// <summary>
     /// Focuses the terminal WebView for the specified pane. Called externally
     /// during tab switching to restore focus to the active pane.
     /// </summary>

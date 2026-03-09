@@ -1,0 +1,29 @@
+<UserControl
+    x:Class="Wcmux.App.Views.TabSidebarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="#191919">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Button x:Name="AddTabButton" Grid.Row="0"
+                Height="32"
+                HorizontalAlignment="Stretch"
+                Background="Transparent" Foreground="#999999"
+                Content="+" FontSize="16"
+                HorizontalContentAlignment="Center"
+                Click="OnAddTabClick" />
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel x:Name="TabList" Orientation="Vertical" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

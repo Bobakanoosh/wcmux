@@ -168,9 +168,9 @@ public sealed partial class MainWindow : Window
             _tabViewModel.TabStore.ActiveTabChanged += OnActiveTabChanged;
             _tabViewModel.TabStore.TabsChanged += OnTabsChanged;
 
-            // Attach tab bar with attention store
-            TabBar.Attach(_tabViewModel, _attentionStore);
-            TabBar.NewTabRequested += () => CreateNewTabWithViewAsync();
+            // Attach tab sidebar with attention store and tab views
+            TabSidebar.Attach(_tabViewModel, _attentionStore, _tabViews);
+            TabSidebar.NewTabRequested += () => CreateNewTabWithViewAsync();
 
             // Attach tab command bindings (persistent, not re-attached on tab switch)
             if (Content is UIElement rootElement)
