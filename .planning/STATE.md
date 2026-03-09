@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_phase: 2
-current_phase_name: Tabbed Multiplexer Shell
-current_plan: 3
-status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-08T19:15:13.468Z"
+milestone: v1.1
+milestone_name: UI/UX Overhaul
+current_phase: 4
+current_phase_name: Not started
+current_plan: 0
+status: defining_requirements
+stopped_at: Defining requirements
+last_updated: "2026-03-08"
 last_activity: 2026-03-08
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 6
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -21,22 +21,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-06)
+See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Users can manage multiple real Windows terminal sessions in one place without losing terminal fidelity or being pushed into an opinionated workflow.
-**Current focus:** Tabbed Multiplexer Shell
+**Current focus:** Defining requirements for v1.1 UI/UX Overhaul
 
 ## Current Position
 
-Current Phase: 2
-Current Phase Name: Tabbed Multiplexer Shell
-Total Phases: 3
-Current Plan: 3
-Total Plans in Phase: 5
-Status: Executing
-Last Activity: 2026-03-08
-
-Progress: [..........] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-08 — Milestone v1.1 started
 
 ## Performance Metrics
 
@@ -44,17 +39,6 @@ Progress: [..........] 0%
 - Total plans completed: 0
 - Average duration: 0 min
 - Total execution time: 0.0 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| Phase 01 P01 | 37 | 3 tasks | 16 files |
-| Phase 01 P02 | 10 | 3 tasks | 14 files |
-| Phase 01 P03 | 7 | 3 tasks | 12 files |
-| Phase 02 P01 | 4 | 2 tasks | 4 files |
-| Phase 02 P02 | 6 | 3 tasks | 8 files |
-| Phase 03 P01 | 8 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -91,11 +75,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1] Validate the concrete terminal rendering/control strategy before locking the shell implementation.
-- [Phase 3] Verify installed-app notification behavior early so Windows toast behavior does not surprise the project late.
+None.
 
 ## Session Continuity
 
-Last session: 2026-03-08T19:15:13.465Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-03-08
+Stopped at: Defining requirements for v1.1
 Resume file: None

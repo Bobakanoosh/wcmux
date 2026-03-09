@@ -8,18 +8,30 @@
 
 Users can manage multiple real Windows terminal sessions in one place without losing terminal fidelity or being pushed into an opinionated workflow.
 
+## Current Milestone: v1.1 UI/UX Overhaul
+
+**Goal:** Replace default Windows chrome and horizontal tabs with a polished dark UI, vertical tab sidebar with output previews, and pane title bars with inline actions.
+
+**Target features:**
+- Custom dark title bar matching app aesthetic
+- Vertical tab sidebar (title, output preview, cwd)
+- Pane title bars showing foreground process with close/split/browser actions
+
 ## Requirements
 
 ### Validated
 
-(None yet - ship to validate)
+- ✓ Users can open real Windows terminal sessions with ConPTY-backed hosting — v1.0
+- ✓ Users can split terminal layouts horizontally and vertically — v1.0
+- ✓ Users can keep multiple tabbed terminal layouts open at once — v1.0
+- ✓ Users receive Windows notifications when an attached tool needs attention — v1.0
 
 ### Active
 
-- [ ] Users can open real Windows terminal sessions with the closest possible native integration.
-- [ ] Users can split terminal layouts horizontally and vertically.
-- [ ] Users can keep multiple tabbed terminal layouts open at once.
-- [ ] Users receive Windows notifications when an attached tool needs attention.
+- [ ] Custom dark title bar replacing default Windows chrome
+- [ ] Vertical tab sidebar with output preview and cwd display
+- [ ] Pane title bars showing foreground process name via ConPTY process tree
+- [ ] Pane action buttons: browser pane, split horizontal, split vertical
 
 ### Out of Scope
 
@@ -49,4 +61,4 @@ The project is inspired directly by `manaflow-ai/cmux`, especially its emphasis 
 | Keep v1 focused on terminals, panes, tabs, and notifications | These are the minimum features that make the tool useful day to day | - Pending |
 
 ---
-*Last updated: 2026-03-06 after initialization*
+*Last updated: 2026-03-08 after v1.1 milestone start*
