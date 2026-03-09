@@ -127,11 +127,11 @@ Plans:
   1. User can drag pane borders with the mouse to resize panes, and the resize persists correctly.
   2. User can swap two adjacent panes using Ctrl+Alt+Shift+Arrow keys.
   3. User can drag a pane title bar onto another pane and see a blue directional preview overlay indicating where the pane will land, then drop to rearrange.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md -- TDD: SetSplitRatio, SwapPanes, MovePaneToTarget reducer functions with unit tests
+- [ ] 07-02-PLAN.md -- Mouse resize handles, keyboard swap bindings, drag-to-rearrange with blue preview overlay
 
 ## Progress
 
@@ -146,4 +146,4 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 4. Custom Chrome and WebView2 Foundation | v1.1 | 2/2 | Complete | 2026-03-09 |
 | 5. Pane Title Bars and Browser Panes | v1.1 | 2/2 | Complete | 2026-03-09 |
 | 6. Vertical Tab Sidebar | 1/2 | In Progress|  | - |
-| 7. Pane Interaction | v1.1 | 0/? | Not started | - |
+| 7. Pane Interaction | v1.1 | 0/2 | Not started | - |
