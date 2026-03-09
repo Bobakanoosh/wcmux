@@ -51,9 +51,9 @@
 
 ### Pane Interaction
 
-- [ ] **PINT-01**: User can drag pane borders with the mouse to resize panes.
-- [ ] **PINT-02**: User can swap pane positions using Ctrl+Alt+Shift+Arrow keys.
-- [ ] **PINT-03**: User can drag a pane title bar onto another pane to rearrange splits, with a blue preview showing the target split direction.
+- [x] **PINT-01**: User can drag pane borders with the mouse to resize panes.
+- [x] **PINT-02**: User can swap pane positions using Ctrl+Alt+Shift+Arrow keys.
+- [x] **PINT-03**: User can drag a pane title bar onto another pane to rearrange splits, with a blue preview showing the target split direction.
 
 ## v2 Requirements
 
@@ -106,9 +106,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIDE-01 | Phase 6 | Complete |
 | SIDE-02 | Phase 6 | Complete |
 | SIDE-03 | Phase 6 | Complete |
-| PINT-01 | Phase 7 | Pending |
-| PINT-02 | Phase 7 | Pending |
-| PINT-03 | Phase 7 | Pending |
+| PINT-01 | Phase 7 | Complete |
+| PINT-02 | Phase 7 | Complete |
+| PINT-03 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 12 total (all complete)
