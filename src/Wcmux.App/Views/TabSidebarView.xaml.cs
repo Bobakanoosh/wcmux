@@ -357,7 +357,8 @@ public sealed partial class TabSidebarView : UserControl
             }
         };
 
-        textBox.LostFocus += (s, e) => CommitRename();
+        // Cancel rename on focus loss (do not auto-commit)
+        textBox.LostFocus += (s, e) => CancelRename();
 
         // Focus the textbox after it's in the visual tree
         DispatcherQueue?.TryEnqueue(() => textBox.Focus(FocusState.Programmatic));
