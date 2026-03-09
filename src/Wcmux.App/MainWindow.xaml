@@ -9,11 +9,38 @@
     Title="wcmux">
     <Grid Background="#1e1e1e">
         <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <views:TabBarView x:Name="TabBar" Grid.Row="0" />
-        <Grid x:Name="TabContentArea" Grid.Row="1" />
+        <!-- Custom title bar -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Background="#1e1e1e">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <FontIcon Grid.Column="0"
+                      Glyph="&#xE756;"
+                      FontFamily="Segoe MDL2 Assets"
+                      FontSize="16"
+                      Foreground="#cccccc"
+                      VerticalAlignment="Center"
+                      Margin="16,0,0,0" />
+
+            <TextBlock Grid.Column="1"
+                       Text="wcmux"
+                       Foreground="#cccccc"
+                       FontSize="12"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"
+                       IsHitTestVisible="False" />
+        </Grid>
+
+        <views:TabBarView x:Name="TabBar" Grid.Row="1" />
+        <Grid x:Name="TabContentArea" Grid.Row="2" />
     </Grid>
 </Window>

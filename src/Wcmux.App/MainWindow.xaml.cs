@@ -1,9 +1,14 @@
+using Microsoft.UI;
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Wcmux.App.Commands;
 using Wcmux.App.Notifications;
 using Wcmux.App.ViewModels;
 using Wcmux.App.Views;
 using Wcmux.Core.Runtime;
+using Windows.Graphics;
+using Windows.UI;
 
 namespace Wcmux.App;
 
@@ -22,6 +27,25 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // Custom title bar setup -- order matters: ExtendsContentIntoTitleBar MUST be set before PreferredHeightOption
+        ExtendsContentIntoTitleBar = true;
+        AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+
+        // Caption button dark-theme colors
+        AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        AppWindow.TitleBar.ButtonForegroundColor = Color.FromArgb(255, 204, 204, 204);
+        AppWindow.TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(255, 45, 45, 45);
+        AppWindow.TitleBar.ButtonHoverForegroundColor = Colors.White;
+        AppWindow.TitleBar.ButtonPressedBackgroundColor = Color.FromArgb(255, 55, 55, 55);
+        AppWindow.TitleBar.ButtonPressedForegroundColor = Colors.White;
+        AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        AppWindow.TitleBar.ButtonInactiveForegroundColor = Color.FromArgb(255, 100, 100, 100);
+
+        // Subscribe to title bar region recalculation events
+        AppTitleBar.Loaded += (_, _) => SetRegionsForCustomTitleBar();
+        AppTitleBar.SizeChanged += (_, _) => SetRegionsForCustomTitleBar();
+
         _sessionManager = new SessionManager();
         _sessionManager.SessionEventReceived += OnGlobalSessionEvent;
         Activated += OnActivated;
@@ -30,6 +54,22 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Exposed for testing.</summary>
     internal TabViewModel? TabViewModel => _tabViewModel;
+
+    /// <summary>
+    /// Configures InputNonClientPointerSource passthrough regions for the custom title bar.
+    /// Currently no interactive elements exist in the title bar, so no passthrough regions
+    /// are needed. This scaffold is ready for future phases to register passthrough regions
+    /// for buttons or controls added to the title bar.
+    /// </summary>
+    private void SetRegionsForCustomTitleBar()
+    {
+        if (AppTitleBar.XamlRoot is null) return;
+
+        var scaleAdjustment = AppTitleBar.XamlRoot.RasterizationScale;
+
+        var nonClientSource = InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
+        nonClientSource.SetRegionRects(NonClientRegionKind.Passthrough, Array.Empty<RectInt32>());
+    }
 
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
