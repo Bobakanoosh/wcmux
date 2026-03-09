@@ -113,11 +113,11 @@ Plans:
   2. User sees the last 2-3 lines of terminal output as preview text on each sidebar tab entry.
   3. User sees attention indicators on sidebar tabs when background panes ring the terminal bell.
   4. The old horizontal tab bar is fully replaced; the sidebar is the only tab navigation surface.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md -- TDD: Ring buffer + ANSI stripping in TerminalSurfaceBridge for output preview capture
+- [ ] 06-02-PLAN.md -- TabSidebarView UI replacing TabBarView, MainWindow layout restructure, attention indicators
 
 ### Phase 7: Pane Interaction
 **Goal**: Users can rearrange and resize panes fluidly using mouse and keyboard without relying solely on keyboard shortcuts.
@@ -144,6 +144,6 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | 2. Tabbed Multiplexer Shell | v1.0 | 2/2 | Complete | 2026-03-07 |
 | 3. Attention And Windows Integration | v1.0 | 2/2 | Complete | 2026-03-08 |
 | 4. Custom Chrome and WebView2 Foundation | v1.1 | 2/2 | Complete | 2026-03-09 |
-| 5. Pane Title Bars and Browser Panes | 2/2 | Complete   | 2026-03-09 | - |
-| 6. Vertical Tab Sidebar | v1.1 | 0/? | Not started | - |
+| 5. Pane Title Bars and Browser Panes | v1.1 | 2/2 | Complete | 2026-03-09 |
+| 6. Vertical Tab Sidebar | v1.1 | 0/2 | Not started | - |
 | 7. Pane Interaction | v1.1 | 0/? | Not started | - |
