@@ -20,9 +20,10 @@ public sealed partial class WorkspaceView : UserControl
     private readonly SolidColorBrush _activeBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
     private readonly SolidColorBrush _inactiveBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
     private readonly SolidColorBrush _attentionBorderBrush = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
-    private readonly Dictionary<string, TextBlock> _paneTitles = new();
+    private readonly Dictionary<string, TextBlock> _paneProcessNames = new();
     private readonly Dictionary<string, string> _paneSessionIds = new();
     private readonly Dictionary<string, DispatcherTimer> _blinkTimers = new();
+    private DispatcherTimer? _processNameTimer;
 
     /// <summary>Fired when a terminal requests a tab-level command (e.g., new-tab).</summary>
     public event Func<string, Task>? TabCommandReceived;
@@ -55,6 +56,11 @@ public sealed partial class WorkspaceView : UserControl
             _viewModel.UpdateContainerSize(RootContainer.ActualWidth, RootContainer.ActualHeight);
         }
 
+        // Start the shared process name polling timer
+        _processNameTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _processNameTimer.Tick += OnProcessNameTimerTick;
+        _processNameTimer.Start();
+
         await RenderLayoutAsync();
     }
 
@@ -63,6 +69,14 @@ public sealed partial class WorkspaceView : UserControl
     /// </summary>
     public async Task DetachAsync()
     {
+        // Stop the process name timer
+        if (_processNameTimer is not null)
+        {
+            _processNameTimer.Stop();
+            _processNameTimer.Tick -= OnProcessNameTimerTick;
+            _processNameTimer = null;
+        }
+
         if (_viewModel is not null)
         {
             _viewModel.LayoutChanged -= OnLayoutChanged;
@@ -87,7 +101,7 @@ public sealed partial class WorkspaceView : UserControl
             await paneView.DetachAsync();
         }
         _paneViews.Clear();
-        _paneTitles.Clear();
+        _paneProcessNames.Clear();
         _paneSessionIds.Clear();
         RootContainer.Children.Clear();
         _viewModel = null;
@@ -139,7 +153,7 @@ public sealed partial class WorkspaceView : UserControl
             {
                 await paneView.DetachAsync();
                 RootContainer.Children.Remove(GetPaneContainer(paneView));
-                _paneTitles.Remove(paneId);
+                _paneProcessNames.Remove(paneId);
                 _paneSessionIds.Remove(paneId);
                 StopBlinkTimer(paneId);
                 _attentionStore?.RemovePane(paneId);
@@ -171,7 +185,16 @@ public sealed partial class WorkspaceView : UserControl
 
         var paneView = new TerminalPaneView { PaneId = paneId };
 
-        // Wrap in a border for active pane highlighting
+        // Build outer grid with title bar row (24px) + content row (star)
+        var outerGrid = new Grid { Tag = paneId };
+        outerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(24) });
+        outerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        // Title bar
+        var titleBar = CreatePaneTitleBar(paneId, session);
+        Grid.SetRow(titleBar, 0);
+
+        // Content: border + terminal view
         var border = new Border
         {
             BorderThickness = new Thickness(2),
@@ -179,46 +202,12 @@ public sealed partial class WorkspaceView : UserControl
             Child = paneView,
             Tag = paneId,
         };
+        Grid.SetRow(border, 1);
 
-        // Add split affordance button — hidden by default, shown on hover
-        var splitButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.Add),
-            Width = 28,
-            Height = 28,
-            Opacity = 0,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, 14, 4),
-            Tag = paneId,
-        };
-        splitButton.Click += OnSplitAffordanceClick;
+        outerGrid.Children.Add(titleBar);
+        outerGrid.Children.Add(border);
 
-        // Pane title overlay showing current working directory
-        var titleBlock = new TextBlock
-        {
-            Text = PathHelper.TruncateCwdFromLeft(session.LastKnownCwd ?? ""),
-            FontSize = 11,
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(180, 200, 200, 200)),
-            Margin = new Thickness(8, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Top,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            IsHitTestVisible = false,
-            Tag = paneId,
-        };
-        _paneTitles[paneId] = titleBlock;
-        _paneSessionIds[paneId] = session.SessionId;
-
-        var grid = new Grid { Tag = paneId };
-        grid.Children.Add(border);
-        grid.Children.Add(titleBlock);
-        grid.Children.Add(splitButton);
-
-        // Show/hide split button on hover
-        grid.PointerEntered += (s, e) => splitButton.Opacity = 0.7;
-        grid.PointerExited += (s, e) => splitButton.Opacity = 0;
-
-        // Handle mouse click focus
+        // Handle mouse click focus on the content area
         border.PointerPressed += (s, e) =>
         {
             _viewModel?.SetActivePane(paneId);
@@ -226,10 +215,6 @@ public sealed partial class WorkspaceView : UserControl
         };
 
         // Route pane commands from the terminal surface to the view model.
-        // Focus/resize commands operate on the current active pane (which may
-        // differ from the source pane if WebView2 focus hasn't caught up yet).
-        // Split/close commands activate the source pane first so they affect
-        // the pane the user is typing in.
         paneView.CommandReceived += cmd => DispatcherQueue?.TryEnqueue(async () =>
         {
             if (IsPaneSpecificCommand(cmd) && paneView.PaneId is not null)
@@ -239,11 +224,138 @@ public sealed partial class WorkspaceView : UserControl
             await HandlePaneCommandAsync(cmd);
         });
 
-        RootContainer.Children.Add(grid);
+        _paneSessionIds[paneId] = session.SessionId;
+        RootContainer.Children.Add(outerGrid);
         _paneViews[paneId] = paneView;
 
         // Attach the session after adding to visual tree
         await paneView.AttachAsync(_viewModel.SessionManager, session);
+    }
+
+    /// <summary>
+    /// Creates the title bar Grid for a pane with process name, split buttons, and close button.
+    /// </summary>
+    private Grid CreatePaneTitleBar(string paneId, ISession session)
+    {
+        var titleBarBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 37, 37, 37)); // #252525
+        var textBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204)); // #CCCCCC
+        var buttonBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204));
+        var transparentBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+
+        var titleBar = new Grid
+        {
+            Background = titleBarBrush,
+            Padding = new Thickness(8, 0, 4, 0),
+        };
+        titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        // Process name text (left side)
+        var initialName = Path.GetFileNameWithoutExtension(session.LaunchSpec.ExecutablePath);
+        var processNameBlock = new TextBlock
+        {
+            Text = initialName ?? "shell",
+            FontSize = 12,
+            Foreground = textBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            IsHitTestVisible = false,
+        };
+        Grid.SetColumn(processNameBlock, 0);
+        _paneProcessNames[paneId] = processNameBlock;
+
+        // Button panel (right side)
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 2,
+        };
+        Grid.SetColumn(buttonPanel, 1);
+
+        // Split Horizontal button
+        var splitHButton = CreateTitleBarButton("\uE745", buttonBrush, transparentBrush);
+        splitHButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            _viewModel.SetActivePane(paneId);
+            await _viewModel.SplitActivePaneHorizontalAsync();
+        };
+
+        // Split Vertical button
+        var splitVButton = CreateTitleBarButton("\uE746", buttonBrush, transparentBrush);
+        splitVButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            _viewModel.SetActivePane(paneId);
+            await _viewModel.SplitActivePaneVerticalAsync();
+        };
+
+        // Close button
+        var closeButton = CreateTitleBarButton("\uE711", buttonBrush, transparentBrush);
+        closeButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            await _viewModel.ClosePaneAsync(paneId);
+        };
+
+        buttonPanel.Children.Add(splitHButton);
+        buttonPanel.Children.Add(splitVButton);
+        buttonPanel.Children.Add(closeButton);
+
+        titleBar.Children.Add(processNameBlock);
+        titleBar.Children.Add(buttonPanel);
+
+        return titleBar;
+    }
+
+    /// <summary>
+    /// Creates a small icon button for the title bar.
+    /// </summary>
+    private static Button CreateTitleBarButton(string glyph, SolidColorBrush foreground, SolidColorBrush background)
+    {
+        return new Button
+        {
+            Content = new FontIcon
+            {
+                Glyph = glyph,
+                FontSize = 12,
+                Foreground = foreground,
+            },
+            Width = 24,
+            Height = 20,
+            MinWidth = 0,
+            MinHeight = 0,
+            Padding = new Thickness(0),
+            Background = background,
+            BorderThickness = new Thickness(0),
+        };
+    }
+
+    /// <summary>
+    /// Single shared timer that polls foreground process names for all panes.
+    /// </summary>
+    private void OnProcessNameTimerTick(object? sender, object e)
+    {
+        if (_viewModel is null) return;
+
+        foreach (var (paneId, processNameBlock) in _paneProcessNames)
+        {
+            var session = _viewModel.GetSessionForPane(paneId);
+            if (session is null || !session.IsRunning) continue;
+
+            var name = ForegroundProcessDetector.GetForegroundProcessName(session.ProcessId);
+            if (name is null)
+            {
+                // Fall back to the executable name from launch spec
+                name = Path.GetFileNameWithoutExtension(session.LaunchSpec.ExecutablePath);
+            }
+
+            if (name is not null)
+            {
+                processNameBlock.Text = name;
+            }
+        }
     }
 
     private void PositionPaneView(string paneId, TerminalPaneView view, PaneRect rect, bool isActive)
@@ -276,21 +388,8 @@ public sealed partial class WorkspaceView : UserControl
 
     private void OnSessionEvent(object? sender, SessionEvent evt)
     {
-        if (evt is SessionCwdChangedEvent cwdEvent)
-        {
-            DispatcherQueue?.TryEnqueue(() =>
-            {
-                // Find the pane associated with this session
-                foreach (var (paneId, sessionId) in _paneSessionIds)
-                {
-                    if (sessionId == cwdEvent.SessionId && _paneTitles.TryGetValue(paneId, out var titleBlock))
-                    {
-                        titleBlock.Text = PathHelper.TruncateCwdFromLeft(cwdEvent.WorkingDirectory);
-                        break;
-                    }
-                }
-            });
-        }
+        // Process name updates are handled by the shared timer now.
+        // SessionCwdChangedEvent no longer drives the title display.
     }
 
     private void OnAttentionChanged(string paneId)
@@ -316,8 +415,20 @@ public sealed partial class WorkspaceView : UserControl
         if (!_paneViews.TryGetValue(paneId, out var view)) return;
 
         var container = GetPaneContainer(view);
-        if (container is not Grid grid || grid.Children.Count == 0 || grid.Children[0] is not Border border)
+        if (container is not Grid outerGrid || outerGrid.Children.Count < 2)
             return;
+
+        // Border is in row 1 (second child added)
+        Border? border = null;
+        foreach (var child in outerGrid.Children)
+        {
+            if (child is Border b && Grid.GetRow(b) == 1)
+            {
+                border = b;
+                break;
+            }
+        }
+        if (border is null) return;
 
         var isActive = paneId == _viewModel.LayoutStore.ActivePaneId;
         var hasAttention = _attentionStore?.HasAttention(paneId) ?? false;
@@ -384,14 +495,22 @@ public sealed partial class WorkspaceView : UserControl
         }
     }
 
+    /// <summary>
+    /// Finds the outer Grid container for a pane view.
+    /// The structure is: outerGrid { Row0: titleBar, Row1: Border { TerminalPaneView } }
+    /// </summary>
     private Grid? GetPaneContainer(TerminalPaneView view)
     {
         foreach (var child in RootContainer.Children)
         {
-            if (child is Grid grid && grid.Children.Count > 0)
+            if (child is Grid grid)
             {
-                if (grid.Children[0] is Border border && border.Child == view)
-                    return grid;
+                // Find the Border in row 1 that contains the pane view
+                foreach (var gridChild in grid.Children)
+                {
+                    if (gridChild is Border border && border.Child == view)
+                        return grid;
+                }
             }
         }
         return null;
@@ -452,16 +571,6 @@ public sealed partial class WorkspaceView : UserControl
                         await TabCommandReceived(command);
                 }
                 break;
-        }
-    }
-
-    private async void OnSplitAffordanceClick(object sender, RoutedEventArgs e)
-    {
-        if (_viewModel is null) return;
-        if (sender is Button button && button.Tag is string paneId)
-        {
-            _viewModel.SetActivePane(paneId);
-            await _viewModel.SplitActivePaneVerticalAsync();
         }
     }
 }
