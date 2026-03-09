@@ -73,6 +73,22 @@ public sealed class WorkspaceViewModel : IAsyncDisposable
     }
 
     /// <summary>
+    /// Splits the active pane and creates a browser pane (no ConPTY session).
+    /// The new pane uses a sentinel session ID prefixed with "browser:".
+    /// </summary>
+    public Task<string> SplitActivePaneAsBrowserAsync(SplitAxis axis, CancellationToken ct = default)
+    {
+        var newPaneId = Guid.NewGuid().ToString("N");
+        var sentinelSessionId = "browser:" + Guid.NewGuid().ToString("N");
+
+        // Browser panes have no terminal session -- skip session creation
+        _layoutStore.SplitActivePane(axis, newPaneId, sentinelSessionId, PaneKind.Browser);
+
+        // Do NOT add to _paneSessions -- browser panes have no ConPTY session
+        return Task.FromResult(newPaneId);
+    }
+
+    /// <summary>
     /// Splits the active pane horizontally.
     /// </summary>
     public Task<string> SplitActivePaneHorizontalAsync(CancellationToken ct = default)
@@ -100,6 +116,8 @@ public sealed class WorkspaceViewModel : IAsyncDisposable
     {
         var sessionId = _layoutStore.ClosePane(paneId);
 
+        // Browser panes have no entry in _paneSessions (sentinel session ID
+        // starting with "browser:"), so skip session teardown for them.
         if (_paneSessions.Remove(paneId, out _) && sessionId is not null)
         {
             await _sessionManager.CloseSessionAsync(sessionId, ct);

@@ -20,6 +20,7 @@ public sealed partial class WorkspaceView : UserControl
     private readonly SolidColorBrush _activeBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
     private readonly SolidColorBrush _inactiveBorderBrush = new(Windows.UI.Color.FromArgb(255, 60, 60, 60));
     private readonly SolidColorBrush _attentionBorderBrush = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
+    private readonly Dictionary<string, BrowserPaneView> _browserPaneViews = new();
     private readonly Dictionary<string, TextBlock> _paneProcessNames = new();
     private readonly Dictionary<string, string> _paneSessionIds = new();
     private readonly Dictionary<string, DispatcherTimer> _blinkTimers = new();
@@ -101,6 +102,13 @@ public sealed partial class WorkspaceView : UserControl
             await paneView.DetachAsync();
         }
         _paneViews.Clear();
+
+        foreach (var browserView in _browserPaneViews.Values)
+        {
+            await browserView.DetachAsync();
+        }
+        _browserPaneViews.Clear();
+
         _paneProcessNames.Clear();
         _paneSessionIds.Clear();
         RootContainer.Children.Clear();
@@ -145,7 +153,7 @@ public sealed partial class WorkspaceView : UserControl
         var paneRects = _viewModel.LayoutStore.PaneRects;
         var activePaneId = _viewModel.LayoutStore.ActivePaneId;
 
-        // Remove views for panes no longer in the tree
+        // Remove terminal views for panes no longer in the tree
         var toRemove = _paneViews.Keys.Where(id => !allPaneIds.Contains(id)).ToList();
         foreach (var paneId in toRemove)
         {
@@ -160,23 +168,61 @@ public sealed partial class WorkspaceView : UserControl
             }
         }
 
+        // Remove browser views for panes no longer in the tree
+        var browserToRemove = _browserPaneViews.Keys.Where(id => !allPaneIds.Contains(id)).ToList();
+        foreach (var paneId in browserToRemove)
+        {
+            if (_browserPaneViews.Remove(paneId, out var browserView))
+            {
+                await browserView.DetachAsync();
+                RootContainer.Children.Remove(GetBrowserPaneContainer(browserView));
+                _paneProcessNames.Remove(paneId);
+                StopBlinkTimer(paneId);
+            }
+        }
+
         // Create or update views for each pane
         foreach (var paneId in allPaneIds)
         {
-            if (!_paneViews.ContainsKey(paneId))
+            if (!_paneViews.ContainsKey(paneId) && !_browserPaneViews.ContainsKey(paneId))
             {
                 await CreatePaneViewAsync(paneId);
             }
 
-            // Position the pane view
-            if (paneRects.TryGetValue(paneId, out var rect) && _paneViews.TryGetValue(paneId, out var view))
+            // Position the pane view (terminal or browser)
+            if (paneRects.TryGetValue(paneId, out var rect))
             {
-                PositionPaneView(paneId, view, rect, paneId == activePaneId);
+                if (_paneViews.TryGetValue(paneId, out var view))
+                {
+                    PositionPaneView(paneId, view, rect, paneId == activePaneId);
+                }
+                else if (_browserPaneViews.TryGetValue(paneId, out var browserView))
+                {
+                    PositionBrowserPaneView(paneId, browserView, rect, paneId == activePaneId);
+                }
             }
         }
     }
 
     private async Task CreatePaneViewAsync(string paneId)
+    {
+        if (_viewModel is null) return;
+
+        // Check PaneKind to decide terminal vs browser
+        var leafNode = _viewModel.LayoutStore.GetLeafNode(paneId);
+        if (leafNode is null) return;
+
+        if (leafNode.Kind == PaneKind.Browser)
+        {
+            await CreateBrowserPaneViewAsync(paneId);
+        }
+        else
+        {
+            await CreateTerminalPaneViewAsync(paneId);
+        }
+    }
+
+    private async Task CreateTerminalPaneViewAsync(string paneId)
     {
         if (_viewModel is null) return;
 
@@ -230,6 +276,58 @@ public sealed partial class WorkspaceView : UserControl
 
         // Attach the session after adding to visual tree
         await paneView.AttachAsync(_viewModel.SessionManager, session);
+    }
+
+    private async Task CreateBrowserPaneViewAsync(string paneId)
+    {
+        if (_viewModel is null) return;
+
+        var browserView = new BrowserPaneView { PaneId = paneId };
+
+        // Build outer grid with title bar row (24px) + content row (star)
+        var outerGrid = new Grid { Tag = paneId };
+        outerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(24) });
+        outerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        // Title bar for browser pane (shows "browser" as process name)
+        var titleBar = CreateBrowserPaneTitleBar(paneId);
+        Grid.SetRow(titleBar, 0);
+
+        // Content: border + browser view
+        var border = new Border
+        {
+            BorderThickness = new Thickness(2),
+            BorderBrush = _inactiveBorderBrush,
+            Child = browserView,
+            Tag = paneId,
+        };
+        Grid.SetRow(border, 1);
+
+        outerGrid.Children.Add(titleBar);
+        outerGrid.Children.Add(border);
+
+        // Handle mouse click focus on the content area
+        border.PointerPressed += (s, e) =>
+        {
+            _viewModel?.SetActivePane(paneId);
+            e.Handled = false;
+        };
+
+        // Route app commands from the browser pane
+        browserView.CommandReceived += cmd => DispatcherQueue?.TryEnqueue(async () =>
+        {
+            if (IsPaneSpecificCommand(cmd) && browserView.PaneId is not null)
+            {
+                _viewModel?.SetActivePane(browserView.PaneId);
+            }
+            await HandlePaneCommandAsync(cmd);
+        });
+
+        RootContainer.Children.Add(outerGrid);
+        _browserPaneViews[paneId] = browserView;
+
+        // Initialize the WebView2 after adding to visual tree
+        await browserView.InitializeWebViewAsync();
     }
 
     /// <summary>
@@ -299,8 +397,74 @@ public sealed partial class WorkspaceView : UserControl
             await _viewModel.ClosePaneAsync(paneId);
         };
 
+        // Browser button (globe icon)
+        var browserButton = CreateTitleBarButton("\uE774", buttonBrush, transparentBrush);
+        browserButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            _viewModel.SetActivePane(paneId);
+            await _viewModel.SplitActivePaneAsBrowserAsync(SplitAxis.Vertical);
+        };
+
         buttonPanel.Children.Add(splitHButton);
         buttonPanel.Children.Add(splitVButton);
+        buttonPanel.Children.Add(browserButton);
+        buttonPanel.Children.Add(closeButton);
+
+        titleBar.Children.Add(processNameBlock);
+        titleBar.Children.Add(buttonPanel);
+
+        return titleBar;
+    }
+
+    /// <summary>
+    /// Creates the title bar Grid for a browser pane showing "browser" as process name.
+    /// </summary>
+    private Grid CreateBrowserPaneTitleBar(string paneId)
+    {
+        var titleBarBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 37, 37, 37)); // #252525
+        var textBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204)); // #CCCCCC
+        var buttonBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 204, 204, 204));
+        var transparentBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+
+        var titleBar = new Grid
+        {
+            Background = titleBarBrush,
+            Padding = new Thickness(8, 0, 4, 0),
+        };
+        titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        // Process name text (shows "browser" for browser panes)
+        var processNameBlock = new TextBlock
+        {
+            Text = "browser",
+            FontSize = 12,
+            Foreground = textBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            IsHitTestVisible = false,
+        };
+        Grid.SetColumn(processNameBlock, 0);
+        _paneProcessNames[paneId] = processNameBlock;
+
+        // Button panel (right side) -- browser pane only has close button
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 2,
+        };
+        Grid.SetColumn(buttonPanel, 1);
+
+        // Close button
+        var closeButton = CreateTitleBarButton("\uE711", buttonBrush, transparentBrush);
+        closeButton.Click += async (s, e) =>
+        {
+            if (_viewModel is null) return;
+            await _viewModel.ClosePaneAsync(paneId);
+        };
+
         buttonPanel.Children.Add(closeButton);
 
         titleBar.Children.Add(processNameBlock);
@@ -341,6 +505,9 @@ public sealed partial class WorkspaceView : UserControl
 
         foreach (var (paneId, processNameBlock) in _paneProcessNames)
         {
+            // Skip browser panes -- they show a static "browser" label
+            if (_browserPaneViews.ContainsKey(paneId)) continue;
+
             var session = _viewModel.GetSessionForPane(paneId);
             if (session is null || !session.IsRunning) continue;
 
@@ -374,6 +541,73 @@ public sealed partial class WorkspaceView : UserControl
         UpdatePaneVisualState(paneId);
     }
 
+    private void PositionBrowserPaneView(string paneId, BrowserPaneView view, PaneRect rect, bool isActive)
+    {
+        var container = GetBrowserPaneContainer(view);
+        if (container is null) return;
+
+        container.Margin = new Thickness(rect.X, rect.Y, 0, 0);
+        container.Width = Math.Max(0, rect.Width);
+        container.Height = Math.Max(0, rect.Height);
+        container.HorizontalAlignment = HorizontalAlignment.Left;
+        container.VerticalAlignment = VerticalAlignment.Top;
+
+        // Update visual state (border, opacity)
+        UpdateBrowserPaneVisualState(paneId);
+    }
+
+    /// <summary>
+    /// Finds the outer Grid container for a browser pane view.
+    /// </summary>
+    private Grid? GetBrowserPaneContainer(BrowserPaneView view)
+    {
+        foreach (var child in RootContainer.Children)
+        {
+            if (child is Grid grid)
+            {
+                foreach (var gridChild in grid.Children)
+                {
+                    if (gridChild is Border border && border.Child == view)
+                        return grid;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void UpdateBrowserPaneVisualState(string paneId)
+    {
+        if (_viewModel is null) return;
+        if (!_browserPaneViews.TryGetValue(paneId, out var view)) return;
+
+        var container = GetBrowserPaneContainer(view);
+        if (container is not Grid outerGrid || outerGrid.Children.Count < 2) return;
+
+        Border? border = null;
+        foreach (var child in outerGrid.Children)
+        {
+            if (child is Border b && Grid.GetRow(b) == 1)
+            {
+                border = b;
+                break;
+            }
+        }
+        if (border is null) return;
+
+        var isActive = paneId == _viewModel.LayoutStore.ActivePaneId;
+
+        if (isActive)
+        {
+            container.Opacity = 1.0;
+            border.BorderBrush = _activeBorderBrush;
+        }
+        else
+        {
+            container.Opacity = 0.5;
+            border.BorderBrush = _inactiveBorderBrush;
+        }
+    }
+
     /// <summary>
     /// Focuses the terminal WebView for the specified pane. Called externally
     /// during tab switching to restore focus to the active pane.
@@ -383,6 +617,11 @@ public sealed partial class WorkspaceView : UserControl
         if (_paneViews.TryGetValue(paneId, out var paneView))
         {
             await paneView.FocusTerminalAsync();
+        }
+        else if (_browserPaneViews.TryGetValue(paneId, out var browserView))
+        {
+            browserView.FocusBrowser();
+            await Task.CompletedTask;
         }
     }
 
@@ -403,9 +642,13 @@ public sealed partial class WorkspaceView : UserControl
 
     private void UpdateActivePaneHighlight(string activePaneId)
     {
-        foreach (var (paneId, view) in _paneViews)
+        foreach (var (paneId, _) in _paneViews)
         {
             UpdatePaneVisualState(paneId);
+        }
+        foreach (var (paneId, _) in _browserPaneViews)
+        {
+            UpdateBrowserPaneVisualState(paneId);
         }
     }
 

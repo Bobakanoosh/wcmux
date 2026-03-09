@@ -32,12 +32,14 @@ public static class LayoutReducer
         string paneId,
         SplitAxis axis,
         string newPaneId,
-        string newSessionId)
+        string newSessionId,
+        PaneKind kind = PaneKind.Terminal)
     {
         var newLeaf = new LeafNode
         {
             PaneId = newPaneId,
             SessionId = newSessionId,
+            Kind = kind,
         };
 
         var newRoot = SplitPaneInTree(root, paneId, axis, newLeaf);

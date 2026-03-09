@@ -90,12 +90,13 @@ public sealed class LayoutStore
     public (string NewPaneId, LeafNode NewLeaf) SplitActivePane(
         SplitAxis axis,
         string newPaneId,
-        string newSessionId)
+        string newSessionId,
+        PaneKind kind = PaneKind.Terminal)
     {
         lock (_lock)
         {
             var (newRoot, newLeaf) = LayoutReducer.SplitPane(
-                _root, _activePaneId, axis, newPaneId, newSessionId);
+                _root, _activePaneId, axis, newPaneId, newSessionId, kind);
 
             _root = newRoot;
             SetActivePaneInternal(newPaneId);
@@ -223,6 +224,18 @@ public sealed class LayoutStore
         }
 
         LayoutChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Finds the LeafNode for a given pane ID, or null if not found.
+    /// Used by the view to check PaneKind for rendering decisions.
+    /// </summary>
+    public LeafNode? GetLeafNode(string paneId)
+    {
+        lock (_lock)
+        {
+            return FindNode(_root, paneId) as LeafNode;
+        }
     }
 
     /// <summary>
