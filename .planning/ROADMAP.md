@@ -13,8 +13,8 @@
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Terminal Runtime And Panes** - Build the ConPTY-backed session core and first-class pane splitting behavior. (completed 2026-03-07)
-- [ ] **Phase 2: Tabbed Multiplexer Shell** - Add tabbed layouts, pane metadata, and stable session organization.
-- [ ] **Phase 3: Attention And Windows Integration** - Deliver generic attention state and Windows notifications without hard-coding tool-specific behavior.
+- [x] **Phase 2: Tabbed Multiplexer Shell** - Add tabbed layouts, pane metadata, and stable session organization. (completed 2026-03-07)
+- [x] **Phase 3: Attention And Windows Integration** - Deliver generic attention state and Windows notifications without hard-coding tool-specific behavior. (completed 2026-03-08)
 
 ## Phase Details
 
@@ -46,8 +46,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — TDD: Core tab state model (TabStore) and path display helper (PathHelper) with full test coverage.
-- [ ] 02-02-PLAN.md — Wire tab lifecycle through app shell: TabViewModel, TabBarView, keyboard shortcuts, pane border titles.
+- [x] 02-01-PLAN.md — TDD: Core tab state model (TabStore) and path display helper (PathHelper) with full test coverage.
+- [x] 02-02-PLAN.md — Wire tab lifecycle through app shell: TabViewModel, TabBarView, keyboard shortcuts, pane border titles.
 
 ### Phase 3: Attention And Windows Integration
 **Goal:** Make background sessions visible through generic attention handling and native Windows notifications.
@@ -61,8 +61,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — AttentionStore, bell detection, and in-app visual indicators (pane dimming, blinking borders, tab attention).
-- [ ] 03-02-PLAN.md — Windows toast notifications, FlashWindowEx, deep-link activation, and end-to-end verification.
+- [x] 03-01-PLAN.md — AttentionStore, bell detection, and in-app visual indicators (pane dimming, blinking borders, tab attention).
+- [x] 03-02-PLAN.md — Windows toast notifications, FlashWindowEx, deep-link activation, and end-to-end verification.
 
 ## Progress
 
@@ -72,5 +72,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Terminal Runtime And Panes | 3/3 | Complete   | 2026-03-07 |
-| 2. Tabbed Multiplexer Shell | 0/2 | Not started | - |
-| 3. Attention And Windows Integration | 1/2 | In Progress|  |
+| 2. Tabbed Multiplexer Shell | 2/2 | Complete | 2026-03-07 |
+| 3. Attention And Windows Integration | 2/2 | Complete | 2026-03-08 |
