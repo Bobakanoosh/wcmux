@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI/UX Overhaul
-status: completed
-stopped_at: Completed 08-01-PLAN.md (human-verify approved — Phase 08 plan 01 complete)
-last_updated: "2026-03-14T07:08:42.310Z"
-last_activity: "2026-03-14 — Phase 07 complete: human verified mouse resize, keyboard swap, drag-to-rearrange (PINT-01, PINT-02, PINT-03)"
+status: archived
+stopped_at: v1.1 milestone archived 2026-03-14
+last_updated: "2026-03-14T17:28:23.414Z"
+last_activity: "2026-03-14 — v1.1 UI/UX Overhaul archived. Start next milestone with /gsd:new-milestone"
 progress:
   total_phases: 8
   completed_phases: 8
@@ -18,66 +18,22 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-08)
+See: .planning/PROJECT.md (updated 2026-03-14 after v1.1 milestone)
 
 **Core value:** Users can manage multiple real Windows terminal sessions in one place without losing terminal fidelity or being pushed into an opinionated workflow.
-**Current focus:** Phase 7 - Pane Interaction
+**Current focus:** Planning next milestone — run `/gsd:new-milestone` to start
 
 ## Current Position
 
-Phase: 7 of 7 (Pane Interaction)
-Plan: 2 of 2 in current phase (complete)
-Status: Complete
-Last activity: 2026-03-14 — Phase 07 complete: human verified mouse resize, keyboard swap, drag-to-rearrange (PINT-01, PINT-02, PINT-03)
-
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 5 (phases 4-6)
-- Average duration: 5 min
-- Total execution time: 0.42 hours
+v1.1 archived. No active phase.
 
 ## Accumulated Context
 
-### Decisions
-
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Roadmap] Use InputNonClientPointerSource (not SetTitleBar) for custom title bar to avoid post-drag interactive control bugs
-- [Roadmap] Use ToolHelp32 P/Invoke (not WMI) for foreground process detection (~1ms vs 50-200ms)
-- [Roadmap] Share single CoreWebView2Environment across all WebView2 instances to prevent memory bloat
-- [Roadmap] Merge browser pane hosting with pane title bars phase (both need PaneKind model change)
-- [04-02] Used CreateWithOptionsAsync instead of CreateAsync (WinRT API has no parameterized CreateAsync)
-- [04-02] User data folder set to %LOCALAPPDATA%/wcmux/WebView2Data
-- [Phase 04]: Used 32px standard title bar height instead of 48px tall per user preference during visual verification
-- [05-01] Single shared DispatcherTimer (2s) for process name polling instead of per-pane timers
-- [05-01] 24px pane title bar height for compact terminal aesthetic
-- [05-01] Process names displayed without .exe extension
-- [05-02] Used PreviewKeyDown instead of AcceleratorKeyPressed for browser pane shortcut interception
-- [05-02] Browser panes use sentinel session ID with "browser:" prefix (no ConPTY session)
-- [05-02] Browser title bar shows static "browser" label with close button only
-- [06-01] Used GeneratedRegex (source-generated) for AnsiStripper pattern matching
-- [06-01] Ring buffer uses lock-based synchronization for fixed-capacity circular access
-- [06-01] Empty/whitespace-only lines excluded from ring buffer
-- [Phase 06]: Removed output preview text from sidebar tab entries per user preference
-- [Phase 06]: All UI elements must use dark theme (RequestedTheme=Dark) - project-wide rule in CLAUDE.md
-- [Phase 06]: Tab ghosting bug deferred - pre-existing WebView2 shared environment issue unrelated to sidebar
-- [Phase 06]: Attention indicator enhanced with blinking blue border around entire tab entry
-- [Phase 07]: MovePaneToTarget uses ClosePane + InsertPaneAtTarget composition for simplicity
-- [07-02]: CursorBorder uses Grid subclass (not Border) because Border is sealed in WinUI 3
-- [07-02]: Swap accelerators registered before resize in PaneCommandBindings so 3-modifier Ctrl+Alt+Shift matches before 2-modifier Ctrl+Alt
-- [07-02]: _isResizing guard prevents CreateResizeHandles() during active drag to preserve pointer capture
-- [Phase 07]: Human verification approved all three PINT requirements: mouse resize (EW/NS cursor + ratio persistence), keyboard swap (Ctrl+Alt+Shift+Arrow), drag-to-rearrange (blue directional overlay + layout rearrangement)
-- [Phase 08-v1.1-tech-debt-cleanup]: PreviewEnabled defaults to false — ring buffer CPU overhead gated, infrastructure retained for SIDE-02 re-enable
-- [Phase 08-v1.1-tech-debt-cleanup]: Horizontal resize handle offset = boundaryPos + 24 (PaneTitleBarHeight) - 3, placing handle below lower pane title bar
-- [Phase 08-v1.1-tech-debt-cleanup]: TabBarView.xaml/.xaml.cs deleted (orphaned Phase 6 artifact) — non-incremental build required to flush XAML codegen
+All decisions logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -85,6 +41,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T07:03:02.960Z
-Stopped at: Completed 08-01-PLAN.md (human-verify approved — Phase 08 plan 01 complete)
+Last session: 2026-03-14
+Stopped at: v1.1 milestone archived
 Resume file: None
