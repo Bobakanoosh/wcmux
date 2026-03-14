@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI/UX Overhaul
 status: in-progress
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-09T22:40:18.127Z"
-last_activity: 2026-03-09 — Completed 06-02 vertical tab sidebar with post-verification fixes
+stopped_at: Completed 07-02-PLAN.md (checkpoint:human-verify pending)
+last_updated: "2026-03-14T00:15:00.000Z"
+last_activity: 2026-03-14 — Completed 07-02 pane interaction UI (mouse resize, keyboard swap, drag-to-rearrange)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 15
   completed_plans: 14
-  percent: 100
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 7 of 7 (Pane Interaction)
-Plan: 1 of 2 in current phase (complete)
+Plan: 2 of 2 in current phase (tasks complete, awaiting human-verify checkpoint)
 Status: In Progress
-Last activity: 2026-03-09 — Completed 07-01 pane interaction reducer functions via TDD
+Last activity: 2026-03-14 — Completed 07-02 pane interaction UI (mouse resize, keyboard swap, drag-to-rearrange)
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 97%
 
 ## Performance Metrics
 
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Tab ghosting bug deferred - pre-existing WebView2 shared environment issue unrelated to sidebar
 - [Phase 06]: Attention indicator enhanced with blinking blue border around entire tab entry
 - [Phase 07]: MovePaneToTarget uses ClosePane + InsertPaneAtTarget composition for simplicity
+- [07-02]: CursorBorder uses Grid subclass (not Border) because Border is sealed in WinUI 3
+- [07-02]: Swap accelerators registered before resize in PaneCommandBindings so 3-modifier Ctrl+Alt+Shift matches before 2-modifier Ctrl+Alt
+- [07-02]: _isResizing guard prevents CreateResizeHandles() during active drag to preserve pointer capture
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09T22:40:18.125Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-14T00:15:00.000Z
+Stopped at: Completed 07-02-PLAN.md tasks (checkpoint:human-verify pending)
 Resume file: None
