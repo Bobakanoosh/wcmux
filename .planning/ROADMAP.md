@@ -72,7 +72,7 @@ Plans:
 - [x] **Phase 5: Pane Title Bars and Browser Panes** - Add per-pane title bars with process detection, close/split actions, and browser pane hosting. (completed 2026-03-09)
 - [ ] **Phase 6: Vertical Tab Sidebar** - Replace horizontal tab bar with vertical sidebar showing tab title, cwd, output preview, and attention state.
 - [x] **Phase 7: Pane Interaction** - Enable mouse resize, keyboard swap, and drag-to-rearrange for pane management. (completed 2026-03-14)
-- [ ] **Phase 8: v1.1 Tech Debt Cleanup** - Fix resize handle positioning, gate ring buffer on display state, remove dead code left from Phase 6 refactor.
+- [x] **Phase 8: v1.1 Tech Debt Cleanup** - Fix resize handle positioning, gate ring buffer on display state, remove dead code left from Phase 6 refactor. (completed 2026-03-14)
 
 ## Phase Details
 

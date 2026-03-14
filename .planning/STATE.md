@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI/UX Overhaul
 status: completed
-stopped_at: Completed 07-02-PLAN.md (human-verify approved — Phase 07 complete)
-last_updated: "2026-03-14T06:08:44.790Z"
+stopped_at: Completed 08-01-PLAN.md (human-verify approved — Phase 08 plan 01 complete)
+last_updated: "2026-03-14T07:03:02.962Z"
 last_activity: "2026-03-14 — Phase 07 complete: human verified mouse resize, keyboard swap, drag-to-rearrange (PINT-01, PINT-02, PINT-03)"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 16
+  completed_plans: 16
   percent: 100
 ---
 
@@ -71,6 +71,9 @@ Recent decisions affecting current work:
 - [07-02]: Swap accelerators registered before resize in PaneCommandBindings so 3-modifier Ctrl+Alt+Shift matches before 2-modifier Ctrl+Alt
 - [07-02]: _isResizing guard prevents CreateResizeHandles() during active drag to preserve pointer capture
 - [Phase 07]: Human verification approved all three PINT requirements: mouse resize (EW/NS cursor + ratio persistence), keyboard swap (Ctrl+Alt+Shift+Arrow), drag-to-rearrange (blue directional overlay + layout rearrangement)
+- [Phase 08-v1.1-tech-debt-cleanup]: PreviewEnabled defaults to false — ring buffer CPU overhead gated, infrastructure retained for SIDE-02 re-enable
+- [Phase 08-v1.1-tech-debt-cleanup]: Horizontal resize handle offset = boundaryPos + 24 (PaneTitleBarHeight) - 3, placing handle below lower pane title bar
+- [Phase 08-v1.1-tech-debt-cleanup]: TabBarView.xaml/.xaml.cs deleted (orphaned Phase 6 artifact) — non-incremental build required to flush XAML codegen
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T06:03:23.715Z
-Stopped at: Completed 07-02-PLAN.md (human-verify approved — Phase 07 complete)
+Last session: 2026-03-14T07:03:02.960Z
+Stopped at: Completed 08-01-PLAN.md (human-verify approved — Phase 08 plan 01 complete)
 Resume file: None
