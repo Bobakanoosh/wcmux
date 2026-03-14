@@ -19,6 +19,10 @@ namespace Wcmux.App.Commands;
 ///   Focus right:      Ctrl+Shift+Right
 ///   Focus up:         Ctrl+Shift+Up
 ///   Focus down:       Ctrl+Shift+Down
+///   Swap left:        Ctrl+Alt+Shift+Left
+///   Swap right:       Ctrl+Alt+Shift+Right
+///   Swap up:          Ctrl+Alt+Shift+Up
+///   Swap down:        Ctrl+Alt+Shift+Down
 ///   Resize left:      Ctrl+Alt+Left
 ///   Resize right:     Ctrl+Alt+Right
 ///   Resize up:        Ctrl+Alt+Up
@@ -66,6 +70,24 @@ public static class PaneCommandBindings
             VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
             () => { viewModel.FocusDown(); return Task.CompletedTask; });
 
+        // Swap pane commands (Ctrl+Alt+Shift) — registered before resize (Ctrl+Alt)
+        // so the more-specific 3-modifier combo matches first in WinUI's accelerator list
+        AddAccelerator(target, VirtualKey.Left,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Left); return Task.CompletedTask; });
+
+        AddAccelerator(target, VirtualKey.Right,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Right); return Task.CompletedTask; });
+
+        AddAccelerator(target, VirtualKey.Up,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Up); return Task.CompletedTask; });
+
+        AddAccelerator(target, VirtualKey.Down,
+            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
+            () => { viewModel.SwapActivePane(Direction.Down); return Task.CompletedTask; });
+
         // Resize commands (Ctrl+Alt)
         AddAccelerator(target, VirtualKey.Left,
             VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu,
@@ -82,23 +104,6 @@ public static class PaneCommandBindings
         AddAccelerator(target, VirtualKey.Down,
             VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu,
             () => { viewModel.ResizeActivePane(Direction.Down); return Task.CompletedTask; });
-
-        // Swap pane commands (Ctrl+Alt+Shift)
-        AddAccelerator(target, VirtualKey.Left,
-            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
-            () => { viewModel.SwapActivePane(Direction.Left); return Task.CompletedTask; });
-
-        AddAccelerator(target, VirtualKey.Right,
-            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
-            () => { viewModel.SwapActivePane(Direction.Right); return Task.CompletedTask; });
-
-        AddAccelerator(target, VirtualKey.Up,
-            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
-            () => { viewModel.SwapActivePane(Direction.Up); return Task.CompletedTask; });
-
-        AddAccelerator(target, VirtualKey.Down,
-            VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu | VirtualKeyModifiers.Shift,
-            () => { viewModel.SwapActivePane(Direction.Down); return Task.CompletedTask; });
     }
 
     /// <summary>

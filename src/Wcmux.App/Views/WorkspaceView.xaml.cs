@@ -224,7 +224,11 @@ public sealed partial class WorkspaceView : UserControl
         }
 
         // Resize handles render on top of pane containers (higher z-index)
-        CreateResizeHandles();
+        // Skip handle recreation during an active resize drag to preserve pointer capture
+        if (!_isResizing)
+        {
+            CreateResizeHandles();
+        }
 
         // Ensure drag preview overlay stays on top of everything
         if (_dragPreview is not null)
