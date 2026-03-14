@@ -27,6 +27,7 @@ public class OutputRingBufferTests : IAsyncDisposable
             initialRows: 24,
             batchIntervalMs: batchIntervalMs,
             ringBufferCapacity: ringBufferCapacity);
+        _bridge.PreviewEnabled = true;
         return _bridge;
     }
 

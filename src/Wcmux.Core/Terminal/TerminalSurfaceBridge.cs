@@ -93,6 +93,12 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
     public int ResizeDebounceMs { get; }
 
     /// <summary>
+    /// When false (default), AppendToRingBuffer is skipped to avoid CPU overhead
+    /// while SIDE-02 preview display is disabled.
+    /// </summary>
+    public bool PreviewEnabled { get; set; } = false;
+
+    /// <summary>
     /// Creates a new bridge between the given session and surface writer.
     /// </summary>
     /// <param name="session">The ConPTY session to bridge.</param>
@@ -287,7 +293,7 @@ public sealed class TerminalSurfaceBridge : IAsyncDisposable
             if (batch.Length == 0) continue;
 
             // Capture plain-text lines into ring buffer for sidebar preview
-            AppendToRingBuffer(batch);
+            if (PreviewEnabled) AppendToRingBuffer(batch);
 
             try
             {
