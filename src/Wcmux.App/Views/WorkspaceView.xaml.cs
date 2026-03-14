@@ -685,19 +685,6 @@ public sealed partial class WorkspaceView : UserControl
     }
 
     /// <summary>
-    /// Returns the most recent plain-text output lines for a specific pane,
-    /// used by the sidebar for preview text display.
-    /// </summary>
-    public string[] GetPreviewText(string paneId, int lineCount)
-    {
-        if (_paneViews.TryGetValue(paneId, out var paneView) && paneView.Bridge is not null)
-        {
-            return paneView.Bridge.GetRecentLines(lineCount);
-        }
-        return Array.Empty<string>();
-    }
-
-    /// <summary>
     /// Focuses the terminal WebView for the specified pane. Called externally
     /// during tab switching to restore focus to the active pane.
     /// </summary>
@@ -892,6 +879,7 @@ public sealed partial class WorkspaceView : UserControl
         CollectSplitBoundaries(root, 0, 0, containerW, containerH, boundaries);
 
         const double handleThickness = 6.0;
+        const double PaneTitleBarHeight = 24.0;
 
         foreach (var (split, boundaryPos, crossStart, crossSize, cx, cy, cw, ch) in boundaries)
         {
@@ -916,7 +904,7 @@ public sealed partial class WorkspaceView : UserControl
                 handle.Cursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
                 handle.Width = crossSize;
                 handle.Height = handleThickness;
-                handle.Margin = new Thickness(crossStart, boundaryPos - handleThickness / 2, 0, 0);
+                handle.Margin = new Thickness(crossStart, boundaryPos + PaneTitleBarHeight - handleThickness / 2, 0, 0);
             }
 
             // Capture split node info for drag handlers via closure

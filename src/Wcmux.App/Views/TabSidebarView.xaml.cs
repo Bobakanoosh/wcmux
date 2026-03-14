@@ -15,7 +15,6 @@ public sealed partial class TabSidebarView : UserControl
 {
     private TabViewModel? _viewModel;
     private AttentionStore? _attentionStore;
-    private Dictionary<string, WorkspaceView>? _tabViews;
     private readonly SolidColorBrush _attentionForeground = new(Windows.UI.Color.FromArgb(255, 50, 130, 240));
     private readonly SolidColorBrush _defaultForeground = new(Windows.UI.Color.FromArgb(255, 204, 204, 204));
     private readonly SolidColorBrush _cwdForeground = new(Windows.UI.Color.FromArgb(255, 128, 128, 128));
@@ -34,11 +33,10 @@ public sealed partial class TabSidebarView : UserControl
     /// <summary>
     /// Attaches to a TabViewModel and subscribes to tab events.
     /// </summary>
-    public void Attach(TabViewModel viewModel, AttentionStore? attentionStore, Dictionary<string, WorkspaceView> tabViews)
+    public void Attach(TabViewModel viewModel, AttentionStore? attentionStore)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _attentionStore = attentionStore;
-        _tabViews = tabViews;
 
         _viewModel.TabStore.TabsChanged += OnTabsChanged;
         _viewModel.TabStore.ActiveTabChanged += OnActiveTabChanged;
