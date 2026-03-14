@@ -57,7 +57,7 @@ completed: 2026-03-14
 - **Duration:** ~15 min
 - **Started:** 2026-03-14T00:00:00Z
 - **Completed:** 2026-03-14T00:15:00Z
-- **Tasks:** 2 auto + 1 checkpoint (human-verify pending)
+- **Tasks:** 2 auto + 1 checkpoint (human-verify approved)
 - **Files modified:** 3
 
 ## Accomplishments
@@ -74,6 +74,7 @@ Each task was committed atomically:
 1. **Task 1: CursorBorder, mouse resize handles, and keyboard swap bindings** - `afcd2c4` (feat)
 2. **Task 2: Drag-to-rearrange with blue directional preview overlay** - `b6fd1f0` (feat)
 3. **Fix: Reorder swap accelerators and add isResizing guard** - `a370dba` (fix)
+4. **Fix: Route Ctrl+Alt+Shift+Arrow swap through xterm.js command channel** - `3f8aee3` (fix)
 
 ## Files Created/Modified
 - `src/Wcmux.App/Views/CursorBorder.cs` - Grid subclass exposing ProtectedCursor for resize cursor shapes
@@ -118,7 +119,8 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 - All three PINT requirements implemented: mouse resize (PINT-01), keyboard swap (PINT-02), drag-to-rearrange (PINT-03)
-- Awaiting Task 3 human visual verification checkpoint before marking phase complete
+- Human visual verification approved — all three PINT requirements verified working
+- Phase 07 complete, all requirements satisfied
 - No blockers
 
 ---
