@@ -95,6 +95,22 @@
       }
     }
 
+    // Ctrl+Alt+Shift combos: swap panes (check before Ctrl+Alt to avoid partial match)
+    if (ctrl && alt && shift) {
+      var cmd = null;
+      switch (key) {
+        case "ArrowLeft": cmd = "swap-left"; break;
+        case "ArrowRight": cmd = "swap-right"; break;
+        case "ArrowUp": cmd = "swap-up"; break;
+        case "ArrowDown": cmd = "swap-down"; break;
+      }
+      if (cmd) {
+        e.preventDefault();
+        window.chrome.webview.postMessage(JSON.stringify({ type: "command", command: cmd }));
+        return false;
+      }
+    }
+
     // Ctrl+Alt combos: resize
     if (ctrl && alt && !shift) {
       var cmd = null;

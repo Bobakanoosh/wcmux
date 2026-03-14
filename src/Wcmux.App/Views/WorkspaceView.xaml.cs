@@ -1229,6 +1229,18 @@ public sealed partial class WorkspaceView : UserControl
             case "focus-down":
                 _viewModel.FocusDown();
                 break;
+            case "swap-left":
+                _viewModel.SwapActivePane(Direction.Left);
+                break;
+            case "swap-right":
+                _viewModel.SwapActivePane(Direction.Right);
+                break;
+            case "swap-up":
+                _viewModel.SwapActivePane(Direction.Up);
+                break;
+            case "swap-down":
+                _viewModel.SwapActivePane(Direction.Down);
+                break;
             case "resize-left":
                 _viewModel.ResizeActivePane(Direction.Left);
                 break;
