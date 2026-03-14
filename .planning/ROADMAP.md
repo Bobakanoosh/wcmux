@@ -72,6 +72,7 @@ Plans:
 - [x] **Phase 5: Pane Title Bars and Browser Panes** - Add per-pane title bars with process detection, close/split actions, and browser pane hosting. (completed 2026-03-09)
 - [ ] **Phase 6: Vertical Tab Sidebar** - Replace horizontal tab bar with vertical sidebar showing tab title, cwd, output preview, and attention state.
 - [x] **Phase 7: Pane Interaction** - Enable mouse resize, keyboard swap, and drag-to-rearrange for pane management. (completed 2026-03-14)
+- [ ] **Phase 8: v1.1 Tech Debt Cleanup** - Fix resize handle positioning, gate ring buffer on display state, remove dead code left from Phase 6 refactor.
 
 ## Phase Details
 
@@ -133,10 +134,24 @@ Plans:
 - [x] 07-01-PLAN.md -- TDD: SetSplitRatio, SwapPanes, MovePaneToTarget reducer functions with unit tests
 - [x] 07-02-PLAN.md -- Mouse resize handles, keyboard swap bindings, drag-to-rearrange with blue preview overlay
 
+### Phase 8: v1.1 Tech Debt Cleanup
+**Goal**: Close low-severity tech debt accumulated during v1.1 — pixel-accurate resize handles, conditional ring buffer, and dead code removal.
+**Depends on**: Phase 7
+**Requirements**: [PINT-01] (refinement), [SIDE-02] (ring buffer only — display stays off per user preference)
+**Gap Closure:** Closes gaps from v1.1 audit
+**Success Criteria** (what must be TRUE):
+  1. Horizontal split resize handle is positioned using pane content rect (excluding 24px title bar), so the handle no longer overlaps the lower pane's title bar.
+  2. `AppendToRingBuffer` / `AnsiStripper.Strip` only run when SIDE-02 preview display is enabled; CPU overhead eliminated while display is off.
+  3. `TabBarView.xaml` + `TabBarView.xaml.cs` deleted, `WorkspaceView.GetPreviewText` removed, `TabSidebarView._tabViews` field and `Attach()` parameter removed — no compilation errors.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md -- Fix resize handle Y offset, gate ring buffer, remove dead code
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
