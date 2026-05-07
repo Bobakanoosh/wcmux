@@ -1,6 +1,6 @@
 [Setup]
 AppName=wcmux
-AppVersion=1.1
+AppVersion=1.1.1
 AppPublisher=wcmux
 DefaultDirName={autopf}\wcmux
 DefaultGroupName=wcmux
