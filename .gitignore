@@ -1,6 +1,11 @@
 # Build output
 bin/
 obj/
+publish/
+installer/
+
+# Local agent/tooling
+.claude/
 
 # IDE
 .vs/

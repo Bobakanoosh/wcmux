@@ -15,6 +15,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,4 +36,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- Copy compiled XAML (.xbf) files to publish output -->
+  <Target Name="CopyXbfsToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_XbfRoot Include="$(OutDir)*.xbf" />
+      <_XbfViews Include="$(OutDir)Views\*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_XbfRoot)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <MakeDir Directories="$(PublishDir)Views" />
+    <Copy SourceFiles="@(_XbfViews)" DestinationFolder="$(PublishDir)Views\" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
