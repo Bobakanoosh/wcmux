@@ -24,6 +24,29 @@ WinUI 3 / Windows App SDK · .NET 9 · ConPTY (kernel32 P/Invoke) · WebView2 ·
 
 Architecture is a store pattern (`LayoutStore`, `TabStore`, `AttentionStore`) over an event-driven session bus, with pure reducer functions for layout transitions.
 
+## Hotkeys
+
+### Tabs
+
+| Action | Shortcut |
+|---|---|
+| New tab | `Ctrl+Shift+T` |
+| Next tab | `Ctrl+Tab` |
+| Previous tab | `Ctrl+Shift+Tab` |
+| Switch to tab 1–8 | `Ctrl+1` … `Ctrl+8` |
+| Switch to last tab | `Ctrl+9` |
+
+### Panes
+
+| Action | Shortcut |
+|---|---|
+| Split horizontal | `Ctrl+Shift+H` |
+| Split vertical | `Ctrl+Shift+V` |
+| Close pane | `Ctrl+Shift+W` |
+| Focus left / right / up / down | `Ctrl+Shift+←/→/↑/↓` |
+| Resize left / right / up / down | `Ctrl+Alt+←/→/↑/↓` |
+| Swap pane left / right / up / down | `Ctrl+Alt+Shift+←/→/↑/↓` |
+
 ## Install
 
 Download the latest `wcmux-setup.exe` from the [Releases](../../releases) page and run it. The installer is self-contained — no separate Windows App SDK install needed.
