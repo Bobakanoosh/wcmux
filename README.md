@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/wcmux.png" alt="wcmux logo" width="128" height="128" />
+</p>
+
 # wcmux
 
 A Windows-first terminal multiplexer for local AI coding workflows. Real ConPTY-backed Windows terminal sessions hosted in a polished WinUI 3 shell — vertical tab sidebar, splittable panes, per-pane title bars with live process names, browser panes, and Windows attention notifications. No web wrapper, no opinionated agent shell.

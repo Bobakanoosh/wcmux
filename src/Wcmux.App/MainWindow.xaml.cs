@@ -32,6 +32,13 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
 
+        // Window/taskbar icon — points at the .ico embedded next to the exe
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "wcmux.ico");
+        if (File.Exists(iconPath))
+        {
+            AppWindow.SetIcon(iconPath);
+        }
+
         // Caption button dark-theme colors
         AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
         AppWindow.TitleBar.ButtonForegroundColor = Color.FromArgb(255, 204, 204, 204);

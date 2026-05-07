@@ -2,7 +2,11 @@
 bin/
 obj/
 publish/
-installer/
+
+# Installer build outputs (we track installer/wcmux.iss only)
+installer/*
+!installer/.gitkeep
+!installer/wcmux.iss
 
 # Local agent/tooling
 .claude/
