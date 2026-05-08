@@ -39,6 +39,24 @@
   term.loadAddon(fitAddon);
   term.loadAddon(webLinksAddon);
   term.open(container);
+
+  // Use the WebGL renderer when available — the default DOM renderer leaves
+  // ghost rows under WebView2's GPU compositing. Fall back to DOM if WebGL
+  // is unavailable or its context is lost (e.g. RDP, GPU driver reset).
+  var webglAddon = null;
+  try {
+    if (typeof WebglAddon !== "undefined" && WebglAddon.WebglAddon) {
+      webglAddon = new WebglAddon.WebglAddon();
+      webglAddon.onContextLoss(function () {
+        try { webglAddon.dispose(); } catch (e) {}
+        webglAddon = null;
+      });
+      term.loadAddon(webglAddon);
+    }
+  } catch (e) {
+    webglAddon = null;
+  }
+
   fitAddon.fit();
 
   // --- Pane command interception ---
