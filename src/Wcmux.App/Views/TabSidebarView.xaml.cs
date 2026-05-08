@@ -259,11 +259,23 @@ public sealed partial class TabSidebarView : UserControl
             _viewModel?.SwitchTab(tabId);
         };
 
-        // Right-click context menu for rename
+        // Right-click context menu for tab actions
         var menuFlyout = new MenuFlyout();
         var renameItem = new MenuFlyoutItem { Text = "Rename" };
         renameItem.Click += (s, e) => StartInlineRename(textStack, tabId, label);
         menuFlyout.Items.Add(renameItem);
+
+        var notificationsItem = new ToggleMenuFlyoutItem
+        {
+            Text = "Disable Windows notifications",
+            IsChecked = _viewModel?.TabStore.GetTab(tabId)?.NotificationsMuted ?? false,
+        };
+        notificationsItem.Click += (s, e) =>
+        {
+            _viewModel?.SetTabNotificationsMuted(tabId, notificationsItem.IsChecked);
+        };
+        menuFlyout.Items.Add(notificationsItem);
+
         grid.ContextFlyout = menuFlyout;
 
         return (entryBorder, grid);

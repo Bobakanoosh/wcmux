@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace Wcmux.App.Terminal;
 
@@ -115,7 +116,7 @@ public sealed class WebViewTerminalController : IAsyncDisposable
         return (width, height);
     }
 
-    private void OnWebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
+    private async void OnWebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
     {
         try
         {
@@ -143,6 +144,10 @@ public sealed class WebViewTerminalController : IAsyncDisposable
                     }
                     break;
 
+                case "paste":
+                    await HandlePasteAsync();
+                    break;
+
                 case "resize":
                     var cols = root.GetProperty("cols").GetInt32();
                     var rows = root.GetProperty("rows").GetInt32();
@@ -162,6 +167,17 @@ public sealed class WebViewTerminalController : IAsyncDisposable
         {
             // Malformed message -- ignore
         }
+    }
+
+    private async Task HandlePasteAsync()
+    {
+        var content = Clipboard.GetContent();
+        if (!content.Contains(StandardDataFormats.Text)) return;
+
+        var text = await content.GetTextAsync();
+        if (string.IsNullOrEmpty(text)) return;
+
+        _onInput?.Invoke(System.Text.Encoding.UTF8.GetBytes(text));
     }
 
     public async ValueTask DisposeAsync()

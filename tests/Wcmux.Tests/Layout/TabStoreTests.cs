@@ -64,6 +64,16 @@ public class TabStoreTests
     }
 
     [Fact]
+    public void CreateTab_NotificationsNotMutedByDefault()
+    {
+        var store = new TabStore();
+        store.CreateTab("t1", "p1", "s1", "~/home");
+
+        var tab = store.GetTab("t1")!;
+        Assert.False(tab.NotificationsMuted);
+    }
+
+    [Fact]
     public void CreateTab_FiresTabsChangedAndActiveTabChanged()
     {
         var store = new TabStore();
@@ -302,6 +312,42 @@ public class TabStoreTests
         store.RenameTab(tabId, "Renamed");
 
         Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public void SetNotificationsMuted_UpdatesTab()
+    {
+        var store = CreateStoreWithOneTab(out var tabId, out _);
+
+        store.SetNotificationsMuted(tabId, true);
+
+        Assert.True(store.GetTab(tabId)!.NotificationsMuted);
+    }
+
+    [Fact]
+    public void SetNotificationsMuted_FiresTabsChanged()
+    {
+        var store = CreateStoreWithOneTab(out var tabId, out _);
+
+        var fired = 0;
+        store.TabsChanged += () => fired++;
+
+        store.SetNotificationsMuted(tabId, true);
+
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
+    public void SetNotificationsMuted_SameValueIsNoOp()
+    {
+        var store = CreateStoreWithOneTab(out var tabId, out _);
+
+        var fired = 0;
+        store.TabsChanged += () => fired++;
+
+        store.SetNotificationsMuted(tabId, false);
+
+        Assert.Equal(0, fired);
     }
 
     // ── TabOrder ─────────────────────────────────────────────────────────

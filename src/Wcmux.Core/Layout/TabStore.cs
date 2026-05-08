@@ -50,7 +50,7 @@ public sealed class TabStore
         string initialSessionId, string defaultLabel)
     {
         var layout = new LayoutStore(initialPaneId, initialSessionId);
-        _tabs[tabId] = new TabState(tabId, layout, defaultLabel, IsCustomLabel: false);
+        _tabs[tabId] = new TabState(tabId, layout, defaultLabel, IsCustomLabel: false, NotificationsMuted: false);
         _tabOrder.Add(tabId);
         _activeTabId = tabId;
 
@@ -120,11 +120,24 @@ public sealed class TabStore
     }
 
     /// <summary>
+    /// Enables or disables Windows notifications for a tab. Fires TabsChanged.
+    /// </summary>
+    public void SetNotificationsMuted(string tabId, bool muted)
+    {
+        if (!_tabs.TryGetValue(tabId, out var tab)) return;
+        if (tab.NotificationsMuted == muted) return;
+
+        _tabs[tabId] = tab with { NotificationsMuted = muted };
+        TabsChanged?.Invoke();
+    }
+
+    /// <summary>
     /// Immutable record representing a single tab's state.
     /// </summary>
     public record TabState(
         string TabId,
         LayoutStore Layout,
         string Label,
-        bool IsCustomLabel);
+        bool IsCustomLabel,
+        bool NotificationsMuted);
 }

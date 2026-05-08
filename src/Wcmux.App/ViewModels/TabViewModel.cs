@@ -87,6 +87,10 @@ public sealed class TabViewModel : IAsyncDisposable
     public void RenameTab(string tabId, string newLabel)
         => _tabStore.RenameTab(tabId, newLabel);
 
+    /// <summary>Enables or disables Windows notifications for a tab.</summary>
+    public void SetTabNotificationsMuted(string tabId, bool muted)
+        => _tabStore.SetNotificationsMuted(tabId, muted);
+
     /// <summary>
     /// Gets the WorkspaceViewModel for a specific tab ID.
     /// </summary>

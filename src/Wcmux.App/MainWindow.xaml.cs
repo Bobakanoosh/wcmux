@@ -23,6 +23,8 @@ public sealed partial class MainWindow : Window
     private bool _isWindowFocused = true;
     private NotificationService? _notificationService;
     private bool _initialized;
+    private static readonly TimeSpan WindowsNotificationThrottle = TimeSpan.FromSeconds(3);
+    private DateTimeOffset _lastWindowsNotificationAt = DateTimeOffset.MinValue;
 
     public MainWindow()
     {
@@ -365,6 +367,8 @@ public sealed partial class MainWindow : Window
     {
         if (evt is SessionBellEvent bellEvt && _tabViewModel is not null)
         {
+            var now = DateTimeOffset.UtcNow;
+
             // Find the pane that owns this session
             var activeWorkspace = _tabViewModel.ActiveWorkspace;
             var activePaneId = activeWorkspace?.LayoutStore.ActivePaneId ?? "";
@@ -381,26 +385,35 @@ public sealed partial class MainWindow : Window
                     {
                         // RaiseBell handles per-pane attention visuals (suppresses
                         // for the focused pane, which is correct for in-app indicators).
-                        _attentionStore.RaiseBell(paneId, activePaneId, DateTimeOffset.UtcNow);
+                        _attentionStore.RaiseBell(paneId, activePaneId, now);
 
                         // Window-level notifications should fire even for the active
                         // pane when the window itself is unfocused (e.g., Claude Code
                         // waiting for input while the user is in another app).
-                        if (!_isWindowFocused && _notificationService is not null)
+                        var tab = _tabViewModel.TabStore.GetTab(tabId);
+                        if (!_isWindowFocused
+                            && _notificationService is not null
+                            && tab?.NotificationsMuted != true
+                            && CanSendWindowsNotification(now))
                         {
-                            var tab = _tabViewModel.TabStore.GetTab(tabId);
                             var tabLabel = tab?.Label ?? "Unknown";
                             var session = workspace.GetSessionForPane(paneId);
                             var paneTitle = session?.LastKnownCwd ?? "";
 
                             _notificationService.ShowAttentionToast(tabId, tabLabel, paneId, paneTitle);
                             _notificationService.FlashTaskbar();
+                            _lastWindowsNotificationAt = now;
                         }
                         return;
                     }
                 }
             }
         }
+    }
+
+    private bool CanSendWindowsNotification(DateTimeOffset now)
+    {
+        return now - _lastWindowsNotificationAt >= WindowsNotificationThrottle;
     }
 
     private async void OnClosed(object sender, WindowEventArgs args)

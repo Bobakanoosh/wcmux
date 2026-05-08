@@ -77,6 +77,11 @@
     if (ctrl && !shift && !alt) {
       var cmd = null;
       switch (key) {
+        case "V":
+        case "v":
+          e.preventDefault();
+          window.chrome.webview.postMessage(JSON.stringify({ type: "paste" }));
+          return false;
         case "Tab": cmd = "next-tab"; break;
         case "1": cmd = "tab-1"; break;
         case "2": cmd = "tab-2"; break;
